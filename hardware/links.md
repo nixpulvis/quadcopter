@@ -1,0 +1,1 @@
+[Quadcopter liPo battery weight/capacity trade off](http://robotics.stackexchange.com/questions/554/quadcopter-lipo-battery-weight-capacity-trade-off)
