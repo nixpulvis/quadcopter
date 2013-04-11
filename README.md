@@ -9,14 +9,14 @@
 
 ## Progress
 
-- [ ] Design structural layout
-- [ ] Design circuit layout
-- [ ] Buy parts
-- [ ] Construct skeleton
-- [ ] Assemble motors
-- [ ] Assemble flight circuitry
-- [ ] Assemble RF communications
-- [ ] Programming...
+### Design structural layout
+### Design circuit layout
+### Buy parts
+### Construct skeleton
+### Assemble motors
+### Assemble flight circuitry
+### Assemble RF communications
+### Programming
 
 ## Photos
 
