@@ -1,23 +1,6 @@
 # Quadrocopter
 
-![Not ours](http://f.cl.ly/items/291p1y2a3d0b2t2n300s/copter.png)
+![](http://f.cl.ly/items/0o0Q2V023j3o1D3d1X1p/972183_10151613643757148_1331798292_n.jpg)
 
  * __Nathan Lilienthal__ [@nixpulvis](https://github.com/nixpulvis)
  * __Alex Johnson__ [@alexjohnson505](https://github.com/alexjohnson505)
-
-## Goals
-
-## Progress
-
-### Design structural layout
-### Design circuit layout
-### Buy parts
-### Construct skeleton
-### Assemble motors
-### Assemble flight circuitry
-### Assemble RF communications
-### Programming
-
-## Photos
-
-## Videos
