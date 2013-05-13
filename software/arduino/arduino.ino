@@ -1,13 +1,20 @@
 #include <Servo.h>
 #include "motor.h"
 
-Motor motor_a(9);
-Motor motor_b(10);
+Motor motor_a(9);  // Arduino pin 9.
+Motor motor_b(10); // Arduino pin 10.
 
 void setup() {
   Serial.begin(9600);
+
+  // Initialize the motors before anything else. For the ESCs to
+  // operate the arduino must be attached and sending 0% power when
+  // the ESCs gain power. Therefor the ESCs must NOT have power
+  // during this part of the setup.
   motor_a.initialize();
   motor_b.initialize();
+
+  // Now the ESCs may have power.
 }
 
 int incomingByte = 0;   // for incoming serial data
