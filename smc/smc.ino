@@ -30,9 +30,6 @@ void setup() {
   // Now the ESCs may have power.
 }
 
-int buffer[128];    // consistent with arduino's recive buffer.
-int index = 0;
-
 void loop() {
   if (Serial.available() > 0) {
     int percent = Serial.parseInt();
