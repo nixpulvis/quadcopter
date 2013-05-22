@@ -26,4 +26,4 @@ Here lies the details of the individual components of the system.
 
 ### Vendor
  - [ESCs](components/esc.md)
- - [Battery](components/esc.md)
+ - [Battery](components/battery.md)
