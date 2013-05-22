@@ -1,6 +1,6 @@
-# Hardware
+# Quadrocopter Documentation
 
-This will serve as the documentation for the quadrocopter's hardware. Discoveries and details will be explained and referenced here. The parts in this documents are based on the build we are making. More information available on [Trello](https://trello.com/b/EygHwZfX)
+Discoveries and details will be explained and referenced here. The parts in this documents are based on the build we are making. More information available on [Trello](https://trello.com/b/EygHwZfX). For reference here are a collection of [useful links](links.md).
 
 ## Overview
 
