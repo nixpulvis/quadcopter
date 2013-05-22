@@ -1,9 +1,4 @@
-# Hardware Notes
-
-This will serve as the documentation for the quadrocopter's hardware. Discoveries and details will be explained and referenced here. The parts in this documents are based on the build we are making. More information available on [Trello](https://trello.com/b/EygHwZfX)
-
-
-## ESCs
+# ESCs
 
 > ESC - Electronic Speed Controller.
 
@@ -84,9 +79,3 @@ It's very easy at this point. Using `motor.cpp`.
  - `attach` - Can be thought of as physically connecting the data wire.
  - `detach` - Can be thought of as physically disconnecting the data wire. It can take a moment for the ESC to recognize this and kill power. When reattached it will be writing whatever value it was at when disconnected.
 
-
-## Battery
-
-Fun fact, this thing comes charged. Learned that by accident, melting some alligator clips and burning myself in the process.
-
-<img src="http://f.cl.ly/items/0o0Q2V023j3o1D3d1X1p/972183_10151613643757148_1331798292_n.jpg" alt="Burned finger" style="width: 400px;"/>
