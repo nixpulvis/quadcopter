@@ -91,9 +91,9 @@ If we multiply this with the matrix `$x_{k}$` we defined earlier, we get the
 following state transformation:
 
 ```mathjax
-\Theta_{k} = \Theta{(k-1)} + \bigtriangleup(\dot{Theta}_{(k-1)} - \dot{\Theta}_{b_{(k-1)}})
-\dot{\Theta}_{k} = \dot{\Theta}_{(k-1)}
-\dot{\Theta}_{b_{k}} = \dot{\Theta}_{b_{(k-1)}}
+\Theta_{k} = \Theta{(k-1)} + \bigtriangleup(\dot{\Theta}_{(k-1)} - \dot{\Theta}_{b_{(k-1)}}) \\
+\dot{\Theta}_{k} = \dot{\Theta}_{(k-1)} \\
+\dot{\Theta}_{b_{k}} = \dot{\Theta}_{b_{(k-1)}} \\
 ```
 
 [1]:http://www.csulb.edu/~hill/ee400d/Reference%20Folder/Kalman%20Filter%20Research.pdf
