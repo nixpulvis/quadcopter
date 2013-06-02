@@ -9,7 +9,7 @@ accelerometer and gyro readings, and reduce the error produced by the sensors.
 Problem
 =======
 
-It will be difficult to get consistently accurate and usable readings from the
+<0;35;18MIt will be difficult to get consistently accurate and usable readings from the
 gyroscope and accelerometer individually. [Gyroscopic drift is a real and
 observable problem][1], but can be solved. it is also difficult to extract
 meaningful data from pure accelerometer data. Accelerometer data is often noisy,
@@ -42,7 +42,6 @@ state `$x$`, where:
  - `$\Theta$` is the measured angle
  - `$\dot{\Theta}$` is the angular velocity
  - `$\dot{\Theta}_{b}$` is the bias in the angular velocity
- - why do these not render properly
 
  ```mathjax
   x =
@@ -62,6 +61,7 @@ Using the model `$x$` defined above we can use the transformation
 x_{k} = Fx_{(k-1)} + Bu_{k} + w_{k}
 ```
 where:
+
  - `$F$` is the state transition model
  - `$x_{(k-1)}$` is the previous state
  - `$B$` is the control-input model
@@ -78,14 +78,22 @@ previous state and the control signal.
 
 We can use the following matrix for `$F$`:
 
-```Mathjax
+```mathjax
 F =
 \begin{bmatrix}
 1 & \bigtriangleup t & -\bigtriangleup t \\
-0 & 1                & 0
-0 & 0                & 1
+0 & 1                & 0 \\
+0 & 0                & 1 \\
 \end{bmatrix}
 ```
 
+If we multiply this with the matrix `$x_{k}$` we defined earlier, we get the
+following state transformation:
+
+```mathjax
+\Theta_{k} = \Theta{(k-1)} + \bigtriangleupt(\dot{Theta}_{(k-1)} - \dot{\Theta}_{b_{(k-1)}})
+\dot{\Theta}_{k} = \dot{\Theta}_{(k-1)}
+\dot{\Theta}_{b_{k}} = \dot{\Theta}_{b_{(k-1)}}
+```
 
 [1]:http://www.csulb.edu/~hill/ee400d/Reference%20Folder/Kalman%20Filter%20Research.pdf
