@@ -38,9 +38,11 @@ State Model
 -----------
 The models for pitch and roll will be identical, and can be described using the
 state `$x$`, where:
- -  .`$\Theta$` is the measured angle
- -  .`$\dot{\Theta}$` is the angular velocity
- -  .`$\dot{\Theta}_{b}$` is the bias in the angular velocity
+
+ - `$\Theta$` is the measured angle
+ - `$\dot{\Theta}$` is the angular velocity
+ - `$\dot{\Theta}_{b}$` is the bias in the angular velocity
+ - why do these not render properly
 
  ```mathjax
   x =
