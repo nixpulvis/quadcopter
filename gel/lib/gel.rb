@@ -17,6 +17,12 @@ class Gel
 
     setup if defined? setup
 
+    glutIdleFunc(-> do
+      loop
+
+      glutPostRedisplay
+    end) if defined? loop
+
     glutDisplayFunc(-> do
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
       glLoadIdentity
@@ -32,6 +38,12 @@ class Gel
 
       glutPostRedisplay
     end) if defined? keyboard
+
+    glutSpecialFunc(-> (key, x, y) do
+      special_keyboard(key, x, y)
+
+      glutPostRedisplay
+    end) if defined? special_keyboard
 
     glutMainLoop
   end
