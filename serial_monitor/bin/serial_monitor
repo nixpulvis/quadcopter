@@ -3,7 +3,7 @@
 $LOAD_PATH.unshift(File.expand_path('../../lib', __FILE__))
 require 'serial_monitor'
 
-SerialMonitor.open("/dev/tty.usbmodem411", 38400, "\n", "\n") do |sm|
+SerialMonitor.open(ARGV[0], 38400, "\n", "\n") do |sm|
   sleep(2)
-  loop { sm.gets }
+  loop { puts sm.gets }
 end
