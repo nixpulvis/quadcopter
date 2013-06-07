@@ -51,54 +51,54 @@ class Gel
   private
 
   def drawBox(width, height, depth)
-    # Front surface. (WHITE)
-    glBegin(GL_POLYGON)
-    glColor3f(1.0, 1.0, 1.0)
+    # Front surface.
+    glBegin(GL_QUADS)
+    glNormal3d(0, 0, 1)
     glVertex3f( width, -height, -depth)  # P1 is red
     glVertex3f( width,  height, -depth)  # P2 is green
     glVertex3f(-width,  height, -depth)  # P3 is blue
     glVertex3f(-width, -height, -depth)  # P4 is purple
     glEnd
 
-    # Back surface. (GREY)
-    glBegin(GL_POLYGON)
-    glColor3f(0.5, 0.5, 0.5)
+    # Back surface.
+    glBegin(GL_QUADS)
+    glNormal3d(0, 0, -1)
     glVertex3f( width, -height, depth)
     glVertex3f( width,  height, depth)
     glVertex3f(-width,  height, depth)
     glVertex3f(-width, -height, depth)
     glEnd
 
-    # Right surface. (RED)
-    glBegin(GL_POLYGON)
-    glColor3f(1.0, 0.0, 0.0)
+    # Right surface.
+    glBegin(GL_QUADS)
+    glNormal3d(1, 0, 0)
     glVertex3f(width, -height, -depth)
     glVertex3f(width,  height, -depth)
     glVertex3f(width,  height,  depth)
     glVertex3f(width, -height,  depth)
     glEnd
 
-    # Left surface. (RED)
-    glBegin(GL_POLYGON)
-    glColor3f(1.0, 0.0, 0.0)
+    # Left surface.
+    glBegin(GL_QUADS)
+    glNormal3d(-1, 0, 0)
     glVertex3f(-width, -height,  depth)
     glVertex3f(-width,  height,  depth)
     glVertex3f(-width,  height, -depth)
     glVertex3f(-width, -height, -depth)
     glEnd
 
-    # Top surface. (GREEN)
-    glBegin(GL_POLYGON)
-    glColor3f(0.0, 1.0, 0.0)
+    # Top surface.
+    glBegin(GL_QUADS)
+    glNormal3d(0, 1, 0)
     glVertex3f( width,  height,  depth)
     glVertex3f( width,  height, -depth)
     glVertex3f(-width,  height, -depth)
     glVertex3f(-width,  height,  depth)
     glEnd
 
-    # Bottom surface. (BLUE)
-    glBegin(GL_POLYGON)
-    glColor3f(0.0, 0.0, 1.0)
+    # Bottom surface.
+    glBegin(GL_QUADS)
+    glNormal3d(0, -1, 0)
     glVertex3f( width, -height, -depth)
     glVertex3f( width, -height,  depth)
     glVertex3f(-width, -height,  depth)
