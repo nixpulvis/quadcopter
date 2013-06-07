@@ -8,6 +8,11 @@ class IMUVisualization < Gel
     initial_position = Position.new(0, 0, 0)
     initial_rotation = Rotation.new(0, 0, 0)
     @imu = IMU.new("MPU-9150", initial_position, initial_rotation)
+
+    glEnable(GL_LIGHTING)
+    glEnable(GL_LIGHT0)
+
+    glLightfv(GL_LIGHT0, GL_POSITION, [10, 10, 10, 1])
   end
 
   def loop
@@ -19,15 +24,22 @@ class IMUVisualization < Gel
   end
 
   def draw
+    # Make a copy of the identity matrix at the top of the stack.
+    glPushMatrix
+
+    # Move the corrdinate system based on IMU's position.
     glTranslatef(@imu.position.x, @imu.position.y, @imu.position.z)
 
-    # Rotate to match `rotate_x` and `rotate_y`.
+    # Rotate to match IMU's current rotation.
     glRotatef(@imu.rotation.x, 1, 0, 0)
     glRotatef(@imu.rotation.y, 0, 1, 0)
     glRotatef(@imu.rotation.z, 0, 0, 1)
 
-    # Draw a box.
+    # Draw the IMU.
     drawBox(0.35, 0.1, 0.45)
+
+    # Remove the top of the stack of matrices, leaving the identity at the top.
+    glPopMatrix
   end
 
   def keyboard(key, x, y)
@@ -51,7 +63,7 @@ class IMUVisualization < Gel
     when 'q'
       @auto = !@auto
     when 'e'
-      @imu.reset
+      @imu.reset(:rotation => false)
     when ' '
       puts <<-EOS
 IMU (#{@imu.name})
