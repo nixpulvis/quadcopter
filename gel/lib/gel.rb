@@ -1,6 +1,7 @@
 require 'opengl'
+require 'gel/version'
 
-class GraphicsEngine
+class Gel
   include Gl, Glu, Glut
 
   def initialize(title, width, height)
@@ -92,5 +93,4 @@ class GraphicsEngine
     glVertex3f(-width, -height, -depth)
     glEnd
   end
-
 end

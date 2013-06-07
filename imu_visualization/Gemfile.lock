@@ -1,3 +1,9 @@
+PATH
+  remote: ../gel
+  specs:
+    gel (0.0.1)
+      opengl
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -7,4 +13,4 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  opengl
+  gel!

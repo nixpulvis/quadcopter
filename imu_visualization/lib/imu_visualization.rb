@@ -1,6 +1,6 @@
-require 'imu_visualization/graphics_engine'
+require 'gel'
 
-class IMUVisualization < GraphicsEngine
+class IMUVisualization < Gel
   attr_reader :rotate_x, :rotate_y, :rotate_z
 
   def setup
