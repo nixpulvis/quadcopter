@@ -27,8 +27,12 @@ class SerialMonitor
   end
 
   def gets
-    until @sp.getc == start_byte; end
-    @sp.gets(stop_byte).gsub(stop_byte, "")
+    begin
+      until @sp.getc == start_byte; end
+      @sp.gets(stop_byte).gsub(stop_byte, "")
+    rescue ArgumentError => e
+      warn "Error parsing serial,` #{e.message}."
+    end
   end
 
   def close
