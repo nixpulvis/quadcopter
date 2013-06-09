@@ -1,46 +1,61 @@
-require 'imu_visualization/position'
-require 'imu_visualization/rotation'
+require 'imu_visualization/inertial_device'
+require 'imu_visualization/coordinate'
 
 class IMU
-  attr_accessor :position, :rotation
-  attr_reader :name
+  attr_reader :name, :position, :rotation
 
-  def initialize(name, position, rotation)
+  def initialize(name, serialport, baud)
     @name = name
-    @position = position
-    @rotation = rotation
 
-    @accelerometer = Accelerometer.new
-    @gyroscope = Gyroscope.new
-    @magnometer = Magnometer.new
+    @serial_monitor = SerialMonitor.new(serialport, baud, "\n")
+    update_data
 
-    @serial_monitor = SerialMonitor.new('/dev/tty.usbmodem411', 38400, "\n")
+    @accelerometer = InertialDevice.new(@data[0..2])
+    @gyroscope     = InertialDevice.new(@data[3..5])
+    @magnometer    = InertialDevice.new(@data[6..8])
+
+    @position = Coordinate.new(0, 0, 0)
+    @rotation = Coordinate.new(0, 0, 0)
   end
 
-  def update(data = {})
-    ax, ay, az,
-    gx, gy, gz,
-    mx, my, mz = @serial_monitor.gets.split(" ").map { |e| e.to_i }
+  # Update all the readings for the IMU's components.
+  def update
+    update_data  # Get a fresh set of data.
 
-    @accelerometer.update(ax, ay, az)
-    @gyroscope.update(gx, gy, gz)
-    @magnometer.update(mx, my, mz)
+    # Update all the inertial devices.
+    @accelerometer.update(@data[0..2])
+    @gyroscope.update(@data[3..5])
+    @magnometer.update(@data[6..8])
 
+    # Calculate new positions and rotations.
+    update_position
+    update_rotation
   end
 
-  def reset(options = {})
-    options = {:position => true, :rotation => true}.merge(options)
+  def calibrate
+    warn "Not implemented yet."
+  end
 
-    if options[:position]
-      position.x = 0
-      position.y = 0
-      position.z = 0
-    end
+  private
 
-    if options[:rotation]
-      rotation.x = 0
-      rotation.y = 0
-      rotation.z = 0
-    end
+  # Get a new set of IMU data over serial.
+  def update_data
+    @data = @serial_monitor.gets.split(" ").map { |e| e.to_i }
+  end
+
+  def update_position
+    # TODO
+  end
+
+  def update_rotation
+    vx, vy, vz = [@gyroscope.x, @gyroscope.y, @gyroscope.z].map { |e| e / 2000 }
+    @rotation = Coordinate.new(
+      @rotation.x + vx,
+      @rotation.y + vy,
+      @rotation.z + vz,
+      vx,
+      vy,
+      vz
+    )
   end
 end
