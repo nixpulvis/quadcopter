@@ -4,13 +4,21 @@ PATH
     gel (0.0.1)
       opengl
 
+PATH
+  remote: ../serial_monitor
+  specs:
+    serial_monitor (0.0.1)
+      serialport
+
 GEM
   remote: http://rubygems.org/
   specs:
     opengl (0.8.0)
+    serialport (1.1.0)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   gel!
+  serial_monitor!

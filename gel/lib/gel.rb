@@ -54,6 +54,7 @@ class Gel
     # Front surface.
     glBegin(GL_QUADS)
     glNormal3d(0, 0, 1)
+    glColor3f(1.0, 1.0, 1.0)
     glVertex3f( width, -height, -depth)  # P1 is red
     glVertex3f( width,  height, -depth)  # P2 is green
     glVertex3f(-width,  height, -depth)  # P3 is blue
@@ -63,6 +64,7 @@ class Gel
     # Back surface.
     glBegin(GL_QUADS)
     glNormal3d(0, 0, -1)
+    glColor3f(0.5, 0.5, 0.5)
     glVertex3f( width, -height, depth)
     glVertex3f( width,  height, depth)
     glVertex3f(-width,  height, depth)
@@ -72,6 +74,7 @@ class Gel
     # Right surface.
     glBegin(GL_QUADS)
     glNormal3d(1, 0, 0)
+    glColor3f(1.0, 0.0, 0.0)
     glVertex3f(width, -height, -depth)
     glVertex3f(width,  height, -depth)
     glVertex3f(width,  height,  depth)
@@ -81,6 +84,7 @@ class Gel
     # Left surface.
     glBegin(GL_QUADS)
     glNormal3d(-1, 0, 0)
+    glColor3f(1.0, 0.0, 0.0)
     glVertex3f(-width, -height,  depth)
     glVertex3f(-width,  height,  depth)
     glVertex3f(-width,  height, -depth)
@@ -90,6 +94,7 @@ class Gel
     # Top surface.
     glBegin(GL_QUADS)
     glNormal3d(0, 1, 0)
+    glColor3f(0.0, 1.0, 0.0)
     glVertex3f( width,  height,  depth)
     glVertex3f( width,  height, -depth)
     glVertex3f(-width,  height, -depth)
@@ -99,6 +104,7 @@ class Gel
     # Bottom surface.
     glBegin(GL_QUADS)
     glNormal3d(0, -1, 0)
+    glColor3f(0.0, 0.0, 1.0)
     glVertex3f( width, -height, -depth)
     glVertex3f( width, -height,  depth)
     glVertex3f(-width, -height,  depth)
