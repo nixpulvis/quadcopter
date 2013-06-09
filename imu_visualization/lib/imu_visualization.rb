@@ -19,16 +19,14 @@ class IMUVisualization < Gel
       :mx => 0, :my => 0, :mz => 0,
     }
 
-    @cal = { :x => 0, :y => 0, :z => 0 }
-    @agg_gyro_x = 0
-    @agg_gyro_y = 0
-    @agg_gyro_z = 0
+    # @cal = { :x => 0, :y => 0, :z => 0 }
+    # @agg_gyro_x = 0
+    # @agg_gyro_y = 0
+    # @agg_gyro_z = 0
   end
 
   def loop
-    @data[:ax], @data[:ay], @data[:az],
-    @data[:gx], @data[:gy], @data[:gz],
-    @data[:mx], @data[:my], @data[:mz] = @serial_monitor.gets.split(" ").map { |e| e.to_i }
+    set_data
 
     case @active_mode
     when :accel
@@ -92,4 +90,13 @@ EOS
       exit(0)
     end
   end
+
+  private
+
+  def update_data
+    @data[:ax], @data[:ay], @data[:az],
+    @data[:gx], @data[:gy], @data[:gz],
+    @data[:mx], @data[:my], @data[:mz] = @serial_monitor.gets.split(" ").map { |e| e.to_i }
+  end
+
 end

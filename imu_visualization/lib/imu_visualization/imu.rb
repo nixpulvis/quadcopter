@@ -9,6 +9,23 @@ class IMU
     @name = name
     @position = position
     @rotation = rotation
+
+    @accelerometer = Accelerometer.new
+    @gyroscope = Gyroscope.new
+    @magnometer = Magnometer.new
+
+    @serial_monitor = SerialMonitor.new('/dev/tty.usbmodem411', 38400, "\n")
+  end
+
+  def update(data = {})
+    ax, ay, az,
+    gx, gy, gz,
+    mx, my, mz = @serial_monitor.gets.split(" ").map { |e| e.to_i }
+
+    @accelerometer.update(ax, ay, az)
+    @gyroscope.update(gx, gy, gz)
+    @magnometer.update(mx, my, mz)
+
   end
 
   def reset(options = {})
