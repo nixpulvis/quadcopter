@@ -2,6 +2,21 @@ require 'gel'
 
 class FixedBoxExample < Gel
 
+  # Runs once before the main loop.
+  def setup
+    super # Do the default setup.
+
+    # Make a multi colored box.
+    @box = Gel::Box.new 0.50, 0.25, 0.25, {
+      :front  => [1, 0, 0],
+      :back   => [1, 1, 0],
+      :left   => [1, 1, 1],
+      :right  => [0, 1, 1],
+      :top    => [0, 1, 0],
+      :bottom => [0, 0, 1],
+    }
+  end
+
   # Runs when OpenGL asks for rendering.
   def draw
     # Make a copy of the identity matrix at the top of the stack.
@@ -16,7 +31,7 @@ class FixedBoxExample < Gel
     glRotatef(30, 0, 0, 1)
 
     # Draw the IMU.
-    drawBox(0.35, 0.1, 0.45)
+    @box.draw
 
     # Remove the top of the stack of matrices, leaving the identity at the top.
     glPopMatrix
