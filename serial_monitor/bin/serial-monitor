@@ -8,7 +8,7 @@ unless ARGV[0] || ARGV[1]
   exit 1
 end
 
-SerialMonitor.open(ARGV[0], ARGV[1], "\n", "\n") do |sm|
+SerialMonitor.open(ARGV[0], ARGV[1].to_i, "\n", "\n") do |sm|
   sleep(2)
   loop { puts sm.gets }
 end
