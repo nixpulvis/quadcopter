@@ -3,7 +3,13 @@
 $LOAD_PATH.unshift(File.expand_path('../../lib', __FILE__))
 require 'serial_monitor'
 
-sm = SerialMonitor.new(ARGV[0], 38400)
+
+unless ARGV[0] || ARGV[1]
+  puts "Usage: serial-monitor <serialport> <baud>"
+  exit 1
+end
+
+sm = SerialMonitor.new(ARGV[0], ARGV[1].to_i)
 
 trap("SIGINT") do
   sm.close
