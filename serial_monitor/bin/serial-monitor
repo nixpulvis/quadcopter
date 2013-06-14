@@ -3,13 +3,8 @@
 $LOAD_PATH.unshift(File.expand_path('../../lib', __FILE__))
 require 'serial_monitor'
 
-unless ARGV[0]
-  puts "No serial port provided. Please include the serial port to monitor"
-  exit 1
-end
-
-unless ARGV[1]
-  puts "No baud rate provided. Please include the baud rate."
+unless ARGV[0] || ARGV[1]
+  puts "Usage: serial-monitor <serialport> <baud>"
   exit 1
 end
 

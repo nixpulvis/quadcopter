@@ -7,12 +7,12 @@ class SerialMonitor
   # Default stop byte to start byte if not provided
   def initialize(serial_port, baud, start_byte, stop_byte = start_byte)
     @serial_port = serial_port
-    @baud = baud.to_i
+    @baud = baud
     @start_byte = start_byte
     @stop_byte = stop_byte
 
     # Initialize SerialPort from gem.
-    @sp = SerialPort.new(@serial_port, @baud)
+    @sp = SerialPort.new(serial_port, baud)
   end
 
   def self.open(serial_port, baud, start_byte, stop_byte = start_byte)
