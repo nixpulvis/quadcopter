@@ -6,26 +6,23 @@ For example, reading the output from a gyroscope on an arduino.
 
 ## Running Serial-monitor
 
-cd into the serial_monitor folder
-execute the program via:
+Usage:
 
-
-`ruby bin/serial-monitor [serial port] [baud rate]`
+`serial-monitor [serial port] [baud rate]`
 
 For example:
 
-`ruby bin/serial-monitor /dev/tty.usbmodem621 38400`
+`serial-monitor /dev/tty.usbmodem621 38400`
 
 # Requirements
 
 - Configurable serialport selection.
 - Configurable Baud rate.
-- Configurable start/stop byte for each message (default to \n).
 
-# Example Usage (in bin/serial-monitor)
+# Example API Usage
 
 ```ruby
-SerialMonitor.open(ARGV[0], [Baud rade], [start character], [end character]) do |sm|
-  [action to perform]
+SerialMonitor.open(file, baud) do |sm|
+  # ...
 end
 ```
