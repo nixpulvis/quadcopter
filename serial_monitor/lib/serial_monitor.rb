@@ -1,37 +1,20 @@
 require 'serialport'
+require 'io/console'
 
-class SerialMonitor
-  attr_reader :serial_port, :baud
-  attr_accessor :start_byte, :stop_byte
+class SerialMonitor < SerialPort
+  def self.new(serial_port, baud)
+    sp = super(serial_port, baud)
 
-  def initialize(serial_port, baud, start_byte, stop_byte = start_byte)
-    @serial_port = serial_port
-    @baud = baud
-    @start_byte = start_byte
-    @stop_byte = stop_byte
+    # http://www.linuxforums.org/
+    #   forum/miscellaneous/130106-tcflush-not-flushing-serial-port.html
+    sleep(0.1)
 
-    # Initialize SerialPort from gem.
-    @sp = SerialPort.new(serial_port, baud)
-  end
+    # http://www.ruby-doc.org/stdlib-2.0/libdoc/
+    #   io/console/rdoc/IO.html#method-i-iflush
+    #
+    # Calls tcflush(fd, TCIFLUSH), just what we need.
+    sp.iflush
 
-
-  def self.open(serial_port, baud, start_byte, stop_byte = start_byte)
-    sm = SerialMonitor.new(serial_port, baud, start_byte, stop_byte)
-
-    if block_given?
-      yield sm
-      sm.close
-    else
-      sm
-    end
-  end
-
-  def gets
-    until @sp.getc == start_byte; end
-    @sp.gets(stop_byte).gsub(stop_byte, "")
-  end
-
-  def close
-    @sp.close
+    sp
   end
 end
