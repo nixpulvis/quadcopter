@@ -1,5 +1,7 @@
 # Quadcoptor Parts List
 
+A quick inventory of all the parts we acquired. __Bold Items__ represent central and specific equiptment used. Normal font-weight items represent accessories, less specific, and items that you might already have access to.
+
 ### Frame
 
 __$67 - [Turnigy Talon Quadcopter (V2.0)](http://www.hobbyking.com/hobbyking/store/__36427__Turnigy_Talon_Quadcopter_V2_0_Carbon_Fiber_Frame_550mm_NL_Warehouse_.html)__
@@ -14,9 +16,9 @@ Once we know what we are doing, upgrade to these, they fit the spec better. [Car
 
 ### Motors
 
-__$16 (x4) - [NTM Prop Drive 28-26 1000KV / 315W](http://www.hobbyking.com/hobbyking/store/__25082__NTM_Prop_Drive_28_26_1000KV_315W_short_shaft_version_.html)__
+__$16 (x4 + 1) - [NTM Prop Drive 28-26 1000KV / 315W](http://www.hobbyking.com/hobbyking/store/__25082__NTM_Prop_Drive_28_26_1000KV_315W_short_shaft_version_.html)__
 
-$2 (x4) - [Propellor Mounting](http://www.hobbyking.com/hobbyking/store/__16719__NTM_Prop_Drive_28_Series_Accessory_Pack.html)
+$2 (x4 + 3) - [Propellor Mounting](http://www.hobbyking.com/hobbyking/store/__16719__NTM_Prop_Drive_28_Series_Accessory_Pack.html)
 
 We highly recommend purchasing additional motors and mounting in the case of rough landings
 
@@ -67,10 +69,11 @@ $0.50 (x4) - [Small PCB](https://www.sparkfun.com/products/8886)
 
 $1.50 (x4) - [Headers](https://www.sparkfun.com/products/11417) x4
 
-$1.50 - [Heat Shink](https://www.sparkfun.com/products/8830)
+$1.50 - [Heat Shrink](https://www.sparkfun.com/products/8830)
 
 $12.49 (x2) - [16 Guage Wire](http://www.amainhobbies.com/product_info.php/cPath/1574_225/products_id/73377/n/Novak-16awg-Brushless-Silicone-Wire-Set-10)
 
 $8 - Alligator Clips @ Radioshack
 
 $0 - Shrink Wrap ("borrowed")
+
