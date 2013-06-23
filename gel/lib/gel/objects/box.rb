@@ -1,12 +1,18 @@
 class Gel
   class Box
-    attr_accessor :width, :height, :depth, :colors
+    attr_accessor :position, :rotation, :width, :height, :depth, :colors
 
     def initialize(width, height, depth, colors = {})
       @width, @height, @depth, @colors = width, height, depth, colors
+      @position = { :x => 0, :y => 0, :z => 0 }
+      @rotation = { :x => 0, :y => 0, :z => 0 }
     end
 
     def draw
+      glRotatef(rotation[:x], 1, 0, 0)
+      glRotatef(rotation[:y], 0, 1, 0)
+      glRotatef(rotation[:z], 0, 0, 1)
+
       glBegin(GL_QUADS)
 
       # Front surface.

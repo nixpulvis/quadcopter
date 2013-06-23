@@ -13,6 +13,9 @@ class Gel
     glutCreateWindow(title)
 
     # Setup the OpenGL run.
+    _setup
+
+    # Run user setup
     setup
 
     # Define the idle function if it exists.
@@ -56,13 +59,9 @@ class Gel
 
   private
 
-  # Default setup, should be called from inheriting class with
-  # super if needed.
-  def setup(options = {})
-    unless options[:no_depth]
-      glClearDepth(1)
-      glEnable(GL_DEPTH_TEST)
-    end
+  def _setup
+    glClearDepth(1)
+    glEnable(GL_DEPTH_TEST)
   end
 
 end
