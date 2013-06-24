@@ -5,23 +5,25 @@
 
 ## Index
 
-This project is made up of a number of components, below are the names of each component and a description of what it does.
+This project is comprised of a number of components. Below is a purpose and description for each main peice.
 
 ### gel
 
-This is a super simple OpenGL engine, created to assist with other parts of the project needing visualization of 3D objects (IMU data).
+Gel is a simple OpenGL engine, created to assist in understanding and analyzing data through 3D visualization. One such part is the 3D representation of data provided via the IMU.
 
 ### serial_monitor
 
-When developing for the Arduino it is almost always helpful to send information over serial to debug issues and to communicate data. The Arduino application's serial monitor is good for human reading the output, but we want to be able to use the data. Serial monitor allows us to read the data from the Arduino reliably, by wrapping the `SerialPort` class from the `serialport` gem.
+Serial monitor reads data from the Arduino by wrapping the `SerialPort` class from the `serialport` gem.
+
+The Arduino application's serial monitor is good for human reading the output, but Serial Monitor allows additional programs to read the data.
 
 ### imu_visualization
 
-To understand better what data we are working with from the IMU itself, this component of the project reads IMU data from the Arduino over serial, and creates 3D models of the data.
+IMU_visualization reads IMU data from the Arduino over serial, and creates 3D models of the data allowing us to create a visual 3D represenation of the captured data.
 
 ### smc
 
-This component is the code that will sit on an Arduino acting as the quadcopter's SMC. It handles reading IMU data over I2C and performing the required math to accurately determinate valid pitch, roll, and yaw values. More information will be collected as well. Then based on it's knowledge of the quadcopters current inertial status, the SMC will drive the motors to the correct speed to reach the given pitch, roll, yaw values.
+This program will sit on an Arduino acting as the quadcopter's SMC. It handles reading IMU data over I2C and performing the required math to accurately determinate valid pitch, roll, and yaw values. Based on it's knowledge of the quadcopters current inertial status, the SMC will drive the motors to the correct speed required to reach the calculated pitch, roll, yaw values.
 
 ## Tasks
 
