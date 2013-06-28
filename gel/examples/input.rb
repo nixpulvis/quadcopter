@@ -6,16 +6,7 @@ module Examples
 
     def setup
       @mode = :keyboard
-
-      color = [0.75, 0.1, 0.1]
-      @box  = Box.new 0.45, 0.35, 0.25, {
-        :front  => color.map { |e| e += 0.1 },
-        :back   => color.map { |e| e += 0.1 },
-        :left   => color,
-        :right  => color,
-        :top    => color.map { |e| e -= 0.1 },
-        :bottom => color.map { |e| e -= 0.1 },
-      }
+      @box  = Box.new 0.45, 0.35, 0.25, [0.75, 0.1, 0.1]
     end
 
     def draw

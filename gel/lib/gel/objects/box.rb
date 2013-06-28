@@ -2,10 +2,22 @@ class Gel
   class Box
     attr_accessor :position, :rotation, :width, :height, :depth, :colors
 
-    def initialize(width, height, depth, colors = {})
-      @width, @height, @depth, @colors = width, height, depth, colors
-      @position = { :x => 0, :y => 0, :z => 0 }
-      @rotation = { :x => 0, :y => 0, :z => 0 }
+    def initialize(w, h, d, c = [0.5,0.5,0.5])
+      @width, @height, @depth = w, h, d
+      self.color = c
+      @position  = { :x => 0, :y => 0, :z => 0 }
+      @rotation  = { :x => 0, :y => 0, :z => 0 }
+    end
+
+    def color=(value)
+      self.colors = {
+        :front  => value.map { |e| e += 0.1 },
+        :back   => value.map { |e| e += 0.1 },
+        :left   => value,
+        :right  => value,
+        :top    => value.map { |e| e -= 0.1 },
+        :bottom => value.map { |e| e -= 0.1 },
+      }
     end
 
     def draw

@@ -5,14 +5,7 @@ module Examples
   class RandomBox < Gel::Box
 
     def initialize(color)
-      super 0.25, 0.75, 0.5, {
-        :front  => color.map { |e| e += 0.1 },
-        :back   => color.map { |e| e += 0.1 },
-        :left   => color,
-        :right  => color,
-        :top    => color.map { |e| e -= 0.1 },
-        :bottom => color.map { |e| e -= 0.1 },
-      }
+      super 0.25, 0.75, 0.5, color
     end
 
     def update_rotation
