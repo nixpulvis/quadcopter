@@ -7,7 +7,7 @@ class IMU
   def initialize(name, serialport, baud)
     @name = name
 
-    @serial_monitor = SerialMonitor.new(serialport, baud, "\n")
+    @serial_monitor = SerialMonitor.new(serialport, baud)
     update_data
 
     @accelerometer = InertialDevice.new(@data[0..2])

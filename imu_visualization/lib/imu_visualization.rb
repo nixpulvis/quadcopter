@@ -5,7 +5,7 @@ require 'imu_visualization/imu'
 class IMUVisualization < Gel
 
   def setup
-    @imu = IMU.new("MPU-9150", "/dev/tty.usbmodem1421", 38400)
+    @imu = IMU.new("MPU-9150", ARGV[0], 38400)
   end
 
   def loop
