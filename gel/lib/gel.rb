@@ -16,7 +16,7 @@ class Gel
     _setup
 
     # Run user setup
-    setup
+    setup if defined? setup
 
     # Define the idle function if it exists.
     glutIdleFunc(-> do
