@@ -38,6 +38,14 @@ class Gel
       glutSwapBuffers
     end) if defined? draw
 
+    glutMouseFunc(-> (button, state, x, y) do
+      mouse_click(button, state, x, y)
+    end) if defined? mouse_click
+
+    glutPassiveMotionFunc(-> (x, y) do
+      mouse_move(x, y)
+    end) if defined? mouse_move
+
     # Define the keyboard handler if it exists.
     glutKeyboardFunc(-> (key, x, y) do
       keyboard(key, x, y)
