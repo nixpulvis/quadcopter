@@ -13,22 +13,7 @@ class IMUVisualization < Gel
   end
 
   def draw
-    # Make a copy of the identity matrix at the top of the stack.
-    glPushMatrix
-
-    # Move the corrdinate system based on IMU's position.
-    glTranslatef(@imu.position.x, @imu.position.y, @imu.position.z)
-
-    # Rotate to match IMU's current rotation.
-    glRotatef(@imu.rotation.x, 1, 0, 0)
-    glRotatef(@imu.rotation.y, 0, 1, 0)
-    glRotatef(@imu.rotation.z, 0, 0, 1)
-
-    # Draw the IMU.
-    drawBox(0.35, 0.1, 0.45)
-
-    # Remove the top of the stack of matrices, leaving the identity at the top.
-    glPopMatrix
+    @imu.draw
   end
 
   def keyboard(key, x, y)

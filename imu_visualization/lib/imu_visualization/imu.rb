@@ -1,10 +1,13 @@
+require 'gel'
 require 'imu_visualization/inertial_device'
 require 'imu_visualization/coordinate'
 
-class IMU
+class IMU < Gel::Box
   attr_reader :name, :position, :rotation
 
   def initialize(name, serialport, baud)
+    super 0.5, 0.2, 0.7
+
     @name = name
 
     @serial_monitor = SerialMonitor.new(serialport, baud)

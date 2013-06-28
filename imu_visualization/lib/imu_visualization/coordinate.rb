@@ -5,4 +5,8 @@ class Coordinate
     @x, @y, @z, @vx, @vy, @vz = x, y, z, vx, vy, vz
   end
 
+  def [](key)
+    send(key)
+  end
+
 end
