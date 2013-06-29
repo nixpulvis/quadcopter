@@ -58,23 +58,35 @@ class IMU < Gel::Box
   end
 
   def update_rotation
-    @rotation = Coordinate.new(
-      @rotation.x + (@gyroscope.x * @time_interval),
-      @rotation.y + (@gyroscope.y * @time_interval),
-      @rotation.z + (@gyroscope.z * @time_interval),
-      @gyroscope.x,
-      @gyroscope.y,
-      @gyroscope.z
-    )
+    estimates = [ [@gyroscope.x, @accelerometer.x],
+                  [@gyroscope.y, @accelerometer.y],
+                  [@gyroscope.z, @accelerometer.z] ].map { |readings| 
+      estimate_angle(readings, @time_interval) }
+    
+    @rotation = Coordinate.new( estimates[0], estimates[1], estimates[2] )
+    
+    # I don't remember why you need two sets of coordinates, so I only used the three
+    # estimate coordinates above.
+
+   #  @rotation = Coordinate.new(
+   #    @rotation.x + (@gyroscope.x * @time_interval),
+   #    @rotation.y + (@gyroscope.y * @time_interval),
+   #    @rotation.z + (@gyroscope.z * @time_interval),
+   #    @gyroscope.x,
+   #    @gyroscope.y,
+   #    @gyroscope.z
+   # )
   end
 
   private
 
   tau = 0.98 # tweak according to drift
   # @angle is the previously estimated angle using both gyro and accel data
-  def estimate_angle(accel, gyro, dt)
+  def estimate_angle(readings, dt)
+    gyro, accel = readings[0], readings[1]
     a = tau/(tau + dt)
     gyro_angle = @angle ? @angle + gyro * dt : 0 # @angle defaults to 0
     @angle = a * gyro_angle + (1-a) * accel
     return @angle
+  end
 end
