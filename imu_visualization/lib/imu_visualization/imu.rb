@@ -67,4 +67,14 @@ class IMU < Gel::Box
       @gyroscope.z
     )
   end
+
+  private
+
+  tau = 0.98 # tweak according to drift
+  # @angle is the previously estimated angle using both gyro and accel data
+  def estimate_angle(accel, gyro, dt)
+    a = tau/(tau + dt)
+    gyro_angle = @angle ? @angle + gyro * dt : 0 # @angle defaults to 0
+    @angle = a * gyro_angle + (1-a) * accel
+    return @angle
 end
