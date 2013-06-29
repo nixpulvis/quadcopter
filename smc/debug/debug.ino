@@ -1,102 +1,81 @@
-// I2C device class (I2Cdev) demonstration Arduino sketch for MPU9150
-// 1/4/2013 original by Jeff Rowberg <jeff@rowberg.net> at https://github.com/jrowberg/i2cdevlib
-//          modified by Aaron Weiss <aaron@sparkfun.com>
-//
-// Changelog:
-//     2011-10-07 - initial release
-//     2013-1-4 - added raw magnetometer output
-
-/* ============================================
-I2Cdev device library code is placed under the MIT license
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-===============================================
-*/
-
-// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
-// is used in I2Cdev.h
 #include "Wire.h"
-
-// I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
-// for both classes must be in the include path of your project
 #include "I2Cdev.h"
 #include "MPU6050.h"
 
-// class default I2C address is 0x68
-// specific I2C addresses may be passed as a parameter here
-// AD0 low = 0x68 (default for InvenSense evaluation board)
-// AD0 high = 0x69
-MPU6050 accelgyro;
+MPU6050 imu;
 
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
-int16_t mx, my, mz;
+// Set the full scale range for the components of the IMU.
+#define ACCEL_FULL_SCALE_RANGE MPU6050_ACCEL_FS_8
+#define GYRO_FULL_SCALE_RANGE  MPU6050_GYRO_FS_500
 
-#define LED_PIN 13
-bool blinkState = false;
+float ACCEL_SCALE;
+float GYRO_SCALE;
 
 void setup() {
-    // join I2C bus (I2Cdev library doesn't do this automatically)
-    Wire.begin();
+  // join I2C bus (I2Cdev library doesn't do this automatically)
+  Wire.begin();
 
-    // initialize serial communication
-    // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
-    // it's really up to you depending on your project)
-    Serial.begin(38400);
+  // initialize serial communication
+  // (38400 chosen because it works as well at 8MHz as it does at 16MHz)
+  Serial.begin(38400);
 
-    // initialize device
-//    Serial.println("Initializing I2C devices...");
-    accelgyro.initialize();
+  // initialize device
+  imu.initialize();
 
-    // verify connection
-//    Serial.println("Testing device connections...");
-//    Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+  /* set accelerometer range.
+   * MPU6050_ACCEL_FS_2(0)  : 2 g max  : Scale 16384
+   * MPU6050_ACCEL_FS_4(1)  : 4 g max  : Scale 8192
+   * MPU6050_ACCEL_FS_8(2) : 8 g max   : Scale 4096
+   * MPU6050_ACCEL_FS_16(3) : 16 g max : Scale 2048
+   */
+  imu.setFullScaleAccelRange(ACCEL_FULL_SCALE_RANGE);
+  ACCEL_SCALE = 16384 / pow(2, ACCEL_FULL_SCALE_RANGE);
 
-    // configure Arduino LED for
-    pinMode(LED_PIN, OUTPUT);
+  /* set gyro range.
+   * MPU6050_GYRO_FS_250(0)  : 250 deg/sec max  : Scale 131.0
+   * MPU6050_GYRO_FS_500(1)  : 500 deg/sec max  : Scale 65.5
+   * MPU6050_GYRO_FS_1000(2) : 1000 deg/sec max : Scale 32.8
+   * MPU6050_GYRO_FS_2000(3) : 2000 deg/sec max : Scale 16.4
+   */
+  imu.setFullScaleGyroRange(GYRO_FULL_SCALE_RANGE);
+  GYRO_SCALE = 131 / pow(2, GYRO_FULL_SCALE_RANGE);
 }
 
-   
-
 void loop() {
-    // read raw accel/gyro measurements from device
-    accelgyro.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+  int16_t ax, ay, az;  // g forces
+  int16_t gx, gy, gz;  // degrees/second
+  int16_t mx, my, mz;  // TODO: learn wtf data this is.
 
-    // these methods (and a few others) are also available
-    //accelgyro.getAcceleration(&ax, &ay, &az);
-    //accelgyro.(&gx, &gy, &gz);
+  // read raw accel/gyro measurements from device
+  imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 
-    Serial.print(ax);
-    Serial.print(" ");
-    Serial.print(ay);
-    Serial.print(" ");
-    Serial.print(az);
-    Serial.print(" ");
-    Serial.print(gx);
-    Serial.print(" ");
-    Serial.print(gy);
-    Serial.print(" ");
-    Serial.print(gz);
-    Serial.print(" ");
-    Serial.print(mx);
-    Serial.print(" ");
-    Serial.print(my);
-    Serial.print(" ");
-    Serial.println(mz);
+  // write accelerometer values (g)
+  Serial.print(scale(ax, ACCEL_SCALE));
+  Serial.print("\t");
+  Serial.print(scale(ay, ACCEL_SCALE));
+  Serial.print("\t");
+  Serial.print(scale(az, ACCEL_SCALE));
+  Serial.print("\t");
+
+  // write gyroscope values (degrees/second)
+  Serial.print(scale(gx, GYRO_SCALE));
+  Serial.print("\t");
+  Serial.print(scale(gy, GYRO_SCALE));
+  Serial.print("\t");
+  Serial.print(scale(gz, GYRO_SCALE));
+  Serial.print("\t");
+  
+  // TODO: complete this.
+  // write raw magnetometer values (??)
+  Serial.print(mx);
+  Serial.print("\t");
+  Serial.print(my);
+  Serial.print("\t");
+  Serial.print(mz);
+
+  Serial.println("");
+}
+
+float scale(int16_t value, float scale_factor) {
+  return value / scale_factor;
 }
