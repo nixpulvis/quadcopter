@@ -23,7 +23,8 @@ class IMU < Gel::Box
 
   # Update all the readings for the IMU's components.
   def update
-    update_data  # Get a fresh set of data.
+    update_data           # Get a fresh set of data.
+    update_time_interval  # Get the new time elapsed since last update.
 
     # Update all the inertial devices.
     @accelerometer.update(@data[0..2])
@@ -43,7 +44,13 @@ class IMU < Gel::Box
 
   # Get a new set of IMU data over serial.
   def update_data
-    @data = @serial_monitor.gets.split(" ").map { |e| e.to_i }
+    @data = @serial_monitor.gets.split("\t").map { |e| e.to_f }
+  end
+
+  def update_time_interval
+    running_time = glutGet(GLUT_ELAPSED_TIME)
+    @time_interval = (running_time - (@running_time || 0)) / 1000.0
+    @running_time  = running_time
   end
 
   def update_position
@@ -51,14 +58,13 @@ class IMU < Gel::Box
   end
 
   def update_rotation
-    vx, vy, vz = [@gyroscope.x, @gyroscope.y, @gyroscope.z].map { |e| e / 2000 }
     @rotation = Coordinate.new(
-      @rotation.x + vx,
-      @rotation.y + vy,
-      @rotation.z + vz,
-      vx,
-      vy,
-      vz
+      @rotation.x + (@gyroscope.x * @time_interval),
+      @rotation.y + (@gyroscope.y * @time_interval),
+      @rotation.z + (@gyroscope.z * @time_interval),
+      @gyroscope.x,
+      @gyroscope.y,
+      @gyroscope.z
     )
   end
 end
