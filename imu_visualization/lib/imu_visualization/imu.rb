@@ -58,35 +58,34 @@ class IMU < Gel::Box
   end
 
   def update_rotation
-    estimates = [ [@gyroscope.x, @accelerometer.x],
-                  [@gyroscope.y, @accelerometer.y],
-                  [@gyroscope.z, @accelerometer.z] ].map { |readings| 
-      estimate_angle(readings, @time_interval) }
-    
-    @rotation = Coordinate.new( estimates[0], estimates[1], estimates[2] )
-    
-    # I don't remember why you need two sets of coordinates, so I only used the three
-    # estimate coordinates above.
+    estimates = [ [:x, @gyroscope.x, @accelerometer.x],
+                  [:y, @gyroscope.y, @accelerometer.y],
+                  [:z, @gyroscope.z, @accelerometer.z] ].map { |axis, *readings|
+      estimate_angle(axis, readings, @time_interval) }
 
-   #  @rotation = Coordinate.new(
-   #    @rotation.x + (@gyroscope.x * @time_interval),
-   #    @rotation.y + (@gyroscope.y * @time_interval),
-   #    @rotation.z + (@gyroscope.z * @time_interval),
-   #    @gyroscope.x,
-   #    @gyroscope.y,
-   #    @gyroscope.z
-   # )
+    # Calculate total force applied
+    r = Math.sqrt(@accelerometer.x**2 + @accelerometer.y**2 + @accelerometer.z**2)
+
+    axr = (Math.acos(@accelerometer.x/r) * 180/Math::PI).round(0)
+    ayr = (Math.acos(@accelerometer.y/r) * 180/Math::PI).round(0)
+    azr = (Math.acos(@accelerometer.z/r) * 180/Math::PI).round(0)
+
+    puts "#{axr}\t#{ayr}\t#{azr}"
+
+    @rotation = Coordinate.new(axr, ayr, azr)
+
+    # @rotation = Coordinate.new( estimates[0], estimatess[1], estimates[2] )
   end
 
   private
 
-  tau = 0.98 # tweak according to drift
   # @angle is the previously estimated angle using both gyro and accel data
-  def estimate_angle(readings, dt)
-    gyro, accel = readings[0], readings[1]
+  def estimate_angle(axis, readings, dt)
+    previous_angle = @rotation[axis]
+    tau = 0.98 # tweak according to drift
     a = tau/(tau + dt)
-    gyro_angle = @angle ? @angle + gyro * dt : 0 # @angle defaults to 0
-    @angle = a * gyro_angle + (1-a) * accel
-    return @angle
+    gyro, accel = readings[0], readings[1]
+    gyro_angle = previous_angle + gyro * dt
+    a * gyro_angle + (1-a) * accel
   end
 end
