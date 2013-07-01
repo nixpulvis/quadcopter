@@ -4,6 +4,10 @@
 
 MPU6050 imu;
 
+// Status LEDs.
+#define GREEN_LED 7
+#define RED_LED 8
+
 // Set the full scale range for the components of the IMU.
 #define ACCEL_FULL_SCALE_RANGE MPU6050_ACCEL_FS_8
 #define GYRO_FULL_SCALE_RANGE  MPU6050_GYRO_FS_500
@@ -12,6 +16,13 @@ float ACCEL_SCALE;
 float GYRO_SCALE;
 
 void setup() {
+  // Setup status LEDs.
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(RED_LED, OUTPUT);
+
+  // Indicate we're getting setup.
+  statusLight(0);
+
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
 
@@ -42,6 +53,9 @@ void setup() {
 }
 
 void loop() {
+  // Indicate we're up and running.
+  statusLight(1);
+
   int16_t ax, ay, az;  // g forces
   int16_t gx, gy, gz;  // degrees/second
   int16_t mx, my, mz;  // TODO: learn wtf data this is.
@@ -64,7 +78,7 @@ void loop() {
   Serial.print("\t");
   Serial.print(scale(gz, GYRO_SCALE));
   Serial.print("\t");
-  
+
   // TODO: complete this.
   // write raw magnetometer values (??)
   Serial.print(mx);
@@ -78,4 +92,9 @@ void loop() {
 
 float scale(int16_t value, float scale_factor) {
   return value / scale_factor;
+}
+
+void statusLight(bool state) {
+  digitalWrite(GREEN_LED, state ? HIGH : LOW);
+  digitalWrite(RED_LED, state ? LOW : HIGH);
 }
