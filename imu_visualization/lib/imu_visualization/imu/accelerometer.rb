@@ -10,6 +10,10 @@ class IMU::Accelerometer
     @force_magnitude = Math.sqrt(@x**2 + @y**2 + @z**2)
   end
 
+  def measurements
+    [:pitch, :roll]
+  end
+
   def pitch
     (Math.atan2(@y, @z)) * 180/Math::PI
   end

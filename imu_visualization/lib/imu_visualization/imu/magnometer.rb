@@ -8,4 +8,8 @@ class IMU::Magnometer
   def update(x, y, z)
     @x, @y, @z = x, y, z
   end
+
+  def measurements
+    []
+  end
 end

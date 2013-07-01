@@ -1,5 +1,5 @@
 class IMU::Gyroscope
-  attr_accessor :x, :y, :z, :delta_x, :delta_y, :delta_z
+  attr_accessor :delta_x, :delta_y, :delta_z
 
   def initialize(delta_x, delta_y, delta_z)
     update(delta_x, delta_y, delta_z)
@@ -16,5 +16,21 @@ class IMU::Gyroscope
     @x = @last_x + (@delta_x * @delta_time)
     @y = @last_y + (@delta_y * @delta_time)
     @z = @last_z + (@delta_z * @delta_time)
+  end
+
+  def measurements
+    [:pitch, :roll, :yaw]
+  end
+
+  def pitch
+    @x
+  end
+
+  def roll
+    @y
+  end
+
+  def yaw
+    @z
   end
 end

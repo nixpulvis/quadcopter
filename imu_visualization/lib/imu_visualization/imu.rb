@@ -55,11 +55,11 @@ class IMU < Gel::Box
 
   def update_rotation
     estimates = [
-      [:x, @gyroscope.x, @accelerometer.pitch],
-      [:y, @gyroscope.y, @accelerometer.roll],
-      [:z, @gyroscope.z],
+      [:x, @gyroscope.pitch, @accelerometer.pitch],
+      [:y, @gyroscope.roll,  @accelerometer.roll],
+      [:z, @gyroscope.yaw],
     ].map do |axis, *readings|
-      estimate_angle(axis, readings, @time_interval)
+      estimate_angle(axis, readings)
     end
 
     @rotation = Coordinate.new(*estimates)
@@ -67,8 +67,7 @@ class IMU < Gel::Box
 
   private
 
-  # @angle is the previously estimated angle using both gyro and accel data
-  def estimate_angle(axis, readings, dt)
+  def estimate_angle(axis, readings)
     if axis == :z
       readings[0]
     else
