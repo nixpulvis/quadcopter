@@ -1,10 +1,11 @@
 require 'gel'
-require 'imu_visualization/accelerometer'
-require 'imu_visualization/gyroscope'
-require 'imu_visualization/magnometer'
 require 'imu_visualization/coordinate'
 
 class IMU < Gel::Box
+  autoload :Accelerometer, 'imu_visualization/imu/accelerometer'
+  autoload :Gyroscope,     'imu_visualization/imu/gyroscope'
+  autoload :Magnometer,    'imu_visualization/imu/magnometer'
+
   attr_reader :name, :position, :rotation
 
   def initialize(name, serialport, baud)

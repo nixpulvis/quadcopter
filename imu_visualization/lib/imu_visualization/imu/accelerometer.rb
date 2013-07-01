@@ -1,4 +1,4 @@
-class Accelerometer
+class IMU::Accelerometer
   attr_reader :force_magnitude
 
   def initialize(x, y, z)

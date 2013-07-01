@@ -1,4 +1,4 @@
-class Magnometer
+class IMU::Magnometer
   attr_reader :x, :y, :z
 
   def initialize(x, y, z)

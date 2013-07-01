@@ -1,4 +1,4 @@
-class Gyroscope
+class IMU::Gyroscope
   attr_accessor :x, :y, :z, :delta_x, :delta_y, :delta_z
 
   def initialize(delta_x, delta_y, delta_z)
