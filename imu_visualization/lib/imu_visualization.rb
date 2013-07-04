@@ -1,6 +1,5 @@
 require 'serial_monitor'
 require 'gel'
-# require 'imu_visualization/imu'
 
 class IMUVisualization < Gel
 
