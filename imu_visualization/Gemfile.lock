@@ -5,9 +5,9 @@ PATH
       opengl
 
 PATH
-  remote: ../serial_monitor
+  remote: ../serial_communicator
   specs:
-    serial_monitor (0.0.1)
+    serial_communicator (0.0.1)
       serialport
 
 GEM
@@ -21,4 +21,4 @@ PLATFORMS
 
 DEPENDENCIES
   gel!
-  serial_monitor!
+  serial_communicator!

@@ -1,4 +1,4 @@
 source 'http://rubygems.org'
 
 gem 'gel', :path => '../gel'
-gem 'serial_monitor', :path => '../serial_monitor'
+gem 'serial_communicator', :path => '../serial_communicator'

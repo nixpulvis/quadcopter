@@ -1,10 +1,10 @@
-require 'serial_monitor'
+require 'serial_communicator'
 require 'gel'
 
 class IMUVisualization < Gel
 
   def setup
-    @serial_monitor = SerialMonitor.new(ARGV[0], 38400)
+    @com = SerialCommunicator.new(ARGV[0], 38400)
     update
   end
 
@@ -73,7 +73,7 @@ class IMUVisualization < Gel
   private
 
   def update
-    w, x, z, y = @serial_monitor.gets.split("\t").map { |e| e.to_f }
+    w, x, z, y = @com.gets.split("\t").map { |e| e.to_f }
 
     # save the matrix form of this quaternion
     @data = [
