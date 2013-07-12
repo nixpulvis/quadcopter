@@ -1,0 +1,9 @@
+[submodule "gel"]
+	path = gel
+	url = https://github.com/nixpulvis/gel.git
+[submodule "serial_communicator"]
+	path = serial_communicator
+	url = https://github.com/nixpulvis/serial_communicator.git
+[submodule "axial_control_unit"]
+	path = axial_control_unit
+	url = https://github.com/nixpulvis/axial_control_unit.git
