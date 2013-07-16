@@ -7,3 +7,6 @@
 [submodule "axial_control_unit"]
 	path = axial_control_unit
 	url = https://github.com/nixpulvis/axial_control_unit.git
+[submodule "docs"]
+	path = docs
+	url = https://github.com/alexjohnson505/quadrocopter_docs.git
