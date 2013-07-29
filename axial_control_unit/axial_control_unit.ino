@@ -46,49 +46,10 @@ void setup() {
   status.greenOnly();
 }
 
-bool running = false;
 void loop() {
   imu.update(&postUpdate);
-
-  if (Serial.available() > 0) {
-    if (Serial.read() == 49) {
-      running = true;
-      motor_b.write(20);
-      motor_c.write(20);
-    } else {
-      running = false;
-      for (int i = 0; i < NUM_MOTORS; i++) {
-        (*motors[i]).write(0);
-      }
-    }
-  }
-
-  if (running) {
-    int delta = imu.quaternion.y/.071;
-
-    if (delta >= 10) delta = 10;
-    else if (delta <= -10) delta = -10;
-
-    motor_b.write(20+delta);
-    motor_c.write(20-delta);
-  }
 }
 
 void postUpdate() {
-  activity();
-  // printQuaternion();
-}
-
-void printQuaternion() {
-  Serial.print(imu.quaternion.w);
-  Serial.print("\t");
-  Serial.print(imu.quaternion.x);
-  Serial.print("\t");
-  Serial.print(imu.quaternion.y);
-  Serial.print("\t");
-  Serial.println(imu.quaternion.z);
-}
-
-void activity() {
   status.toggleGreen();
 }

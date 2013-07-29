@@ -4,33 +4,31 @@
 #include <MPU9150.h>
 #include "imu.h"
 
-// Initialize the _int to be false (At the beginning there were no interrupts.)
-// *note the IMU class can only handle 1 mpu since we have a static interupt
-// state variable.
-volatile bool IMU::_int = false;
+// Raw MPU data.
+int16_t raw_ax, raw_ay, raw_az, raw_gx, raw_gy, raw_gz;
+float ax, ay, az, gx, gy, gz;
+float a_scale, g_scale;
+
+unsigned long last_time = 0;
 
 void IMU::initialize() {
   Wire.begin();
 
   _mpu.initialize();
-  _mpu.dmpInitialize();
-  _mpu.setDMPEnabled(true);
-  attachInterrupt(0, _interruptServiceRoutine, RISING);
-  _packetSize = _mpu.dmpGetFIFOPacketSize();
+  _mpu.setFullScaleAccelRange(ACCEL_FS);
+  a_scale = 2048.0 * pow(2, 3 - ACCEL_FS);
+  _mpu.setFullScaleGyroRange(GYRO_FS);
+  g_scale = 16.4 * pow(2, 3 - GYRO_FS);
 }
 
 bool IMU::update() {
-  if (_int == true && _mpu.getIntStatus() & 0x02) {
-    _int = false;
-
-    while (_fifoCount < _packetSize) _fifoCount = _mpu.getFIFOCount();
-    _mpu.getFIFOBytes(_fifoBuffer, _packetSize);
-    _fifoCount -= _packetSize;
-
-    _mpu.dmpGetQuaternion(&quaternion, _fifoBuffer);
-    return true;
-  }
-  return false;
+  _mpu.getMotion6(&raw_ax, &raw_ay, &raw_az, &raw_gx, &raw_gy, &raw_gz);
+  ax = raw_ax / a_scale;
+  ay = raw_ay / a_scale;
+  az = raw_az / a_scale;
+  gx = raw_gx / a_scale;
+  gy = raw_gy / a_scale;
+  gz = raw_gz / a_scale;
 }
 
 bool IMU::update(void (*post_update)()) {
@@ -42,17 +40,11 @@ bool IMU::update(void (*post_update)()) {
 }
 
 bool IMU::update(void (*pre_update)(), void (*post_update)()) {
-  if (_int == true) {
-    pre_update();
+  pre_update();
 
-    if (update()) {
-      post_update();
-      return true;
-    }
+  if (update()) {
+    post_update();
+    return true;
   }
   return false;
-}
-
-void IMU::_interruptServiceRoutine() {
-  _int = true;
 }
