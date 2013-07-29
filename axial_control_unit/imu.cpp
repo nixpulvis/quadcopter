@@ -29,6 +29,15 @@ bool IMU::update() {
   gx = raw_gx / a_scale;
   gy = raw_gy / a_scale;
   gz = raw_gz / a_scale;
+
+  float dt;
+  if (last_time == 0) {
+    dt = 0.0;
+  } else {
+    dt = (float)(micros() - last_time) / 1000000.0;
+  }
+  last_time = micros();
+
 }
 
 bool IMU::update(void (*post_update)()) {
