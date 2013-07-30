@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <I2Cdev.h>
 #include <MPU9150.h>
+#include <MatrixMath.h>
 
 #include "motor.h"
 #include "status_indicator.h"
@@ -48,6 +49,12 @@ void setup() {
 
 void loop() {
   imu.update(&postUpdate);
+  Serial.print("x ");
+  Serial.print(imu.gyroscope_displacement.x);
+  Serial.print("\ty ");
+  Serial.print(imu.gyroscope_displacement.y);
+  Serial.print("\tz ");
+  Serial.println(imu.gyroscope_displacement.z);
 }
 
 void postUpdate() {

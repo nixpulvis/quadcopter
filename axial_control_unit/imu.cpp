@@ -6,7 +6,6 @@
 
 // Raw MPU data.
 int16_t raw_ax, raw_ay, raw_az, raw_gx, raw_gy, raw_gz;
-float ax, ay, az, gx, gy, gz;
 float a_scale, g_scale;
 
 unsigned long last_time = 0;
@@ -22,14 +21,19 @@ void IMU::initialize() {
 }
 
 bool IMU::update() {
+  /* Read and scale the raw data from the MPU into proper units.
+   * - Forces in (Gs) upon the x, y, z axes of the MPU.
+   * - Angular velocity in degrees about the x, y, z axes.
+   */
   _mpu.getMotion6(&raw_ax, &raw_ay, &raw_az, &raw_gx, &raw_gy, &raw_gz);
-  ax = raw_ax / a_scale;
-  ay = raw_ay / a_scale;
-  az = raw_az / a_scale;
-  gx = raw_gx / a_scale;
-  gy = raw_gy / a_scale;
-  gz = raw_gz / a_scale;
+  accelerometer_force.x = raw_ax / a_scale;
+  accelerometer_force.y = raw_ay / a_scale;
+  accelerometer_force.z = raw_az / a_scale;
+  gyroscope_velocity.x  = raw_gx / g_scale;
+  gyroscope_velocity.y  = raw_gy / g_scale;
+  gyroscope_velocity.z  = raw_gz / g_scale;
 
+  /* Calculate the change in time from the last update to now. */
   float dt;
   if (last_time == 0) {
     dt = 0.0;
@@ -38,6 +42,22 @@ bool IMU::update() {
   }
   last_time = micros();
 
+  /* Calculate the displacement in degrees of the current angle from the last
+   * angle.
+   */
+  gyroscope_displacement.x = gyroscope_velocity.x * dt;
+  gyroscope_displacement.y = gyroscope_velocity.y * dt;
+  gyroscope_displacement.z = gyroscope_velocity.z * dt;
+
+  // TODO
+  // Quaternion gyro_quat = Quaternion(
+  //   cos(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2) + sin(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2),
+  //   cos(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2) - sin(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2),
+  //   sin(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2) + cos(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2),
+  //   cos(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2) - sin(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2)
+  // );
+
+  // quat = quat.getProduct(gyro_quat);
 }
 
 bool IMU::update(void (*post_update)()) {

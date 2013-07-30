@@ -9,7 +9,10 @@
 class IMU
 {
   public:
-    VectorFloat axis_angle;
+    VectorFloat accelerometer_force;
+    VectorFloat gyroscope_velocity;
+    VectorFloat gyroscope_displacement;
+    Quaternion quat;
 
     void initialize();
     bool update();
