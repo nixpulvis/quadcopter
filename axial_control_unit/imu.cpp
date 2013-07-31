@@ -18,6 +18,9 @@ void IMU::initialize() {
   a_scale = 2048.0 * pow(2, 3 - ACCEL_FS);
   _mpu.setFullScaleGyroRange(GYRO_FS);
   g_scale = 16.4 * pow(2, 3 - GYRO_FS);
+
+  /* Gyroscope spin-up time */
+  delay(30);
 }
 
 bool IMU::update() {
