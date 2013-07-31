@@ -12,12 +12,11 @@ unsigned long last_time = 0;
 
 void IMU::initialize() {
   Wire.begin();
-
   _mpu.initialize();
-  _mpu.setFullScaleAccelRange(ACCEL_FS);
-  a_scale = 2048.0 * pow(2, 3 - ACCEL_FS);
-  _mpu.setFullScaleGyroRange(GYRO_FS);
-  g_scale = 16.4 * pow(2, 3 - GYRO_FS);
+
+  /* Set the scale values for the raw data. */
+  a_scale = 2048.0 * pow(2, 3 - _mpu.getFullScaleAccelRange());
+  g_scale = 16.4 * pow(2, 3 - _mpu.getFullScaleGyroRange());
 
   /* Gyroscope spin-up time */
   delay(30);
