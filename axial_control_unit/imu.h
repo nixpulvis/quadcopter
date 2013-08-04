@@ -9,12 +9,10 @@ class IMU
     VectorFloat accelerometer_force;
     VectorFloat gyroscope_velocity;
     VectorFloat gyroscope_displacement;
-    Quaternion quat;
+    float anglePrediction[2];
 
     void initialize();
-    bool update();
-    bool update(void (*post_update)());
-    bool update(void (*pre_update)(), void (*post_update)());
+    int update();
 
   private:
     MPU9150 _mpu;

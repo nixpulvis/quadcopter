@@ -3,7 +3,7 @@
 #include "motor.h"
 
 #define MOTOR_ARM  8   // 8:   Send before power to arm.
-#define MOTOR_LOW  62  // 62:  Off.
+#define MOTOR_LOW  61  // 61:  Off.
 #define MOTOR_HIGH 113 // 113: Full Power.
 
 Motor::Motor(int pin) {

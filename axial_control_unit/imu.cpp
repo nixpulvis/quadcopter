@@ -8,6 +8,14 @@
 int16_t raw_ax, raw_ay, raw_az, raw_gx, raw_gy, raw_gz;
 float a_scale, g_scale;
 
+// Kalman filter variables.
+float Pxx = 0.1; // angle variance
+float Pvv = 0.1; // angle change rate variance
+float Pxv = 0.1; // angle / angle change rate covariance
+float gyroVar = 0.1;
+float deltaGyroVar = 0.1;
+float accelVar = 5.0;
+
 unsigned long last_time = 0;
 
 void IMU::initialize() {
@@ -22,7 +30,7 @@ void IMU::initialize() {
   delay(30);
 }
 
-bool IMU::update() {
+int IMU::update() {
   /* Read and scale the raw data from the MPU into proper units.
    * - Forces in (Gs) upon the x, y, z axes of the MPU.
    * - Angular velocity in degrees about the x, y, z axes.
@@ -44,38 +52,27 @@ bool IMU::update() {
   }
   last_time = micros();
 
-  /* Calculate the displacement in degrees of the current angle from the last
-   * angle.
-   */
-  gyroscope_displacement.x = gyroscope_velocity.x * dt;
-  gyroscope_displacement.y = gyroscope_velocity.y * dt;
-  gyroscope_displacement.z = gyroscope_velocity.z * dt;
+  float accelAngle[2];
+  accelAngle[0] = atan2(accelerometer_force.z, accelerometer_force.y) * -360.0 / (2*PI) + 90.0;
+  accelAngle[1] = atan2(accelerometer_force.z, accelerometer_force.x) * 360.0 / (2*PI) - 90.0;
 
-  // TODO
-  // Quaternion gyro_quat = Quaternion(
-  //   cos(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2) + sin(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2),
-  //   cos(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2) - sin(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2),
-  //   sin(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2) + cos(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2),
-  //   cos(gyroscope_displacement.x/2) * cos(gyroscope_displacement.y/2) * sin(gyroscope_displacement.z/2) - sin(gyroscope_displacement.x/2) * sin(gyroscope_displacement.y/2) * cos(gyroscope_displacement.z/2)
-  // );
+  anglePrediction[0] += gyroscope_velocity.x * dt;
+  anglePrediction[1] += gyroscope_velocity.y * dt;
 
-  // quat = quat.getProduct(gyro_quat);
-}
+  /* Kalman filter */
+  Pxx += dt * (2 * Pxv + dt * Pvv);
+  Pxv += dt * Pvv;
+  Pxx += dt * gyroVar;
+  Pvv += dt * deltaGyroVar;
+  float kx = Pxx * (1.0 / (Pxx + accelVar));
+  float kv = Pxv * (1.0 / (Pxx + accelVar));
 
-bool IMU::update(void (*post_update)()) {
-  if (update()) {
-    post_update();
-    return true;
-  }
-  return false;
-}
+  anglePrediction[0] += (accelAngle[0] - anglePrediction[0]) * kx;
+  anglePrediction[1] += (accelAngle[1] - anglePrediction[1]) * kx;
 
-bool IMU::update(void (*pre_update)(), void (*post_update)()) {
-  pre_update();
+  Pxx *= (1 - kx);
+  Pxv *= (1 - kx);
+  Pvv -= kv * Pxv;
 
-  if (update()) {
-    post_update();
-    return true;
-  }
-  return false;
+  return dt;
 }
