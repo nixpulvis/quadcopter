@@ -34,6 +34,7 @@ enum State {
   SETUP   = 0,
   RUNNING = 1,
   OFF     = 2,
+  RUNNING2 = 3,
 };
 
 State state = SETUP;
@@ -58,21 +59,25 @@ void setup() {
 void loop() {
   switch(state) {
     case RUNNING:
-      running(); break;
+      running(25); break;
     case OFF:
       off(); break;
+    case RUNNING2:
+      running(30); break;
   }
 }
 
 void serialEvent() {
   if (Serial.read() == '1') {
     state = RUNNING;
+  } else if (Serial.read() == '2') {
+    state = RUNNING2;
   } else {
     state = OFF;
   }
 }
 
-void running() {
+void running(int power) {
   status.red(false);
 
   int dt = imu.update();
@@ -104,8 +109,18 @@ void running() {
   output[0] = proportional[0] + integral[0] + derivative[0];
   output[1] = proportional[1] + integral[1] + derivative[1];
 
-  (*motors[2]).write(10 - output[0]);
-  (*motors[3]).write(10 + output[0]);
+  if (output[0] > 5) {
+    output[0] = 5;
+  }
+  if (output[1] > 5) {
+    output[1] = 5;
+  }
+
+  (*motors[2]).write(power + output[0]);
+  (*motors[3]).write(power - output[0]);
+
+  (*motors[0]).write(power + output[1]);
+  (*motors[1]).write(power - output[1]);
 }
 
 void off() {
