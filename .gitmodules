@@ -7,3 +7,6 @@
 [submodule "docs"]
 	path = docs
 	url = https://github.com/alexjohnson505/quadrocopter_docs.git
+[submodule "serial"]
+	path = serial
+	url = https://github.com/nixpulvis/serial.git
