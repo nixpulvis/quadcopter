@@ -1,12 +1,3 @@
 [submodule "gel"]
 	path = gel
 	url = https://github.com/nixpulvis/gel.git
-[submodule "serial_communicator"]
-	path = serial_communicator
-	url = https://github.com/nixpulvis/serial_communicator.git
-[submodule "docs"]
-	path = docs
-	url = https://github.com/alexjohnson505/quadcopter_docs.git
-[submodule "serial"]
-	path = serial
-	url = https://github.com/nixpulvis/serial.git
