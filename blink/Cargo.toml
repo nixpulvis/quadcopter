@@ -1,0 +1,7 @@
+[package]
+name = "blink"
+version = "0.1.0"
+authors = ["Nathan Lilienthal <nlilienthal@apple.com>"]
+
+[dependencies]
+libc = { version = "0.2.11", default-features = false }
