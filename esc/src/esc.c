@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <avr.h>
+#include <avrm/uart.h>
 #include <util/delay.h>
 
 int main(void)

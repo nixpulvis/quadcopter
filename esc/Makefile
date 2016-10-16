@@ -16,8 +16,8 @@ BAUD ?= 115200
 LANGUAGE ?= c
 
 # Libraries, defaults to all.
-C_LIBS = $(wildcard lib/*.c)
-LIBS ?= $(C_LIBS:.c=)
+C_SRCS = $(wildcard src/*.c)
+SRCS ?= $(C_SRCS:.c=)
 
 ################################
 
@@ -26,7 +26,7 @@ LIBS ?= $(C_LIBS:.c=)
 # The `gcc` executable.
 CC = avr-gcc
 C_FLAGS = -Wall -Werror -pedantic -Os -std=c99
-C_HEADERS = -I.
+C_HEADERS = -I. -I/usr/local/avr/include -I/usr/local/Cellar/avr-libc/2.0.0/avr/include
 
 # The `as` executable.
 AS = avr-as
@@ -43,16 +43,14 @@ AVRDUDE_FLAGS = -F -V -c arduino -p ATMEGA328P
 AVRSIZE = avr-size
 AVRSIZE_FLAGS = -C
 
-# List of projects. TODO: ASM projects.
-PROJECTS = $(wildcard projects/*.c)
-
 # List of tests.
 TESTS = $(wildcard test/**/*.c)
 
 ################################
 
-# The default task is to build all projects.
-default: all
+# The default rule is run with just `make`.
+
+default: src/esc.o
 
 ################################
 
@@ -60,19 +58,6 @@ default: all
 
 # These rules are not file based.
 .PHONY: flash serial size clean
-
-# Mark the hex file as intermediate.
-.INTERMEDIATE: $(TARGET).hex $(TARGET).bin
-
-################################
-
-# Utility rules (not file based).
-
-# Build all the projects.
-#
-# TODO: Build asm too!
-#
-all: $(PROJECTS:.c=.bin)
 
 # flash
 #
@@ -96,15 +81,19 @@ size: $(TARGET).bin
 
 # Remove non-source files.
 clean:
-	rm -rf $(wildcard **/*.o) $(wildcard **/*.bin) $(wildcard **/*.hex) $(wildcard test/**/*.hex)
+	rm -rf \
+		$(wildcard **/*.o) \
+		$(wildcard **/*.bin) \
+		$(wildcard **/*.hex) \
+		$(wildcard test/**/*.hex) \
 
 ################################
 
 # File rules.
 
 # .bin <- .o
-%.bin: %.o $(LIBS:=.o)
-	$(CC) $(C_FLAGS) -mmcu=$(MMCU) $? -o $@ -lavr
+%.bin: %.o $(SRCS:=.o)
+	$(CC) $(C_FLAGS) -mmcu=$(MMCU) $? -o $@ -lavrm
 
 # .o <- .c
 %.o: %.c
@@ -113,3 +102,8 @@ clean:
 # .hex <- .bin
 %.hex: %.bin
 	$(OBJ_COPY) $(OBJ_COPY_FLAGS) $< $@
+
+################################
+
+# Mark the hex file as intermediate.
+.INTERMEDIATE: $(TARGET).hex $(TARGET).bin
