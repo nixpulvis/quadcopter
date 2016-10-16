@@ -1,19 +1,39 @@
-// https://doc.rust-lang.org/book/no-stdlib.html
 #![feature(lang_items)]
-#![feature(start)]
+
+// We won't use the usual `main` function. We are going to use a different "entry point".
+#![no_main]
+
+// We won't use the standard library because it requires OS abstractions like threads and files and
+// those are not available in this platform.
 #![no_std]
 
-// Pull in the system libc library for what crt0.o likely requires
-extern crate libc;
+// Conceptually, this is our program "entry point". It's the first thing the microcontroller will
+// execute when it (re)boots. (As far as the linker is concerned the entry point must be named
+// `start` (by default; it can have a different name). That's why this function is `pub`lic, named
+// `start` and is marked as `#[no_mangle]`.)
+//
+// Returning from this function is undefined because there is nothing to return to! To statically
+// forbid returning from this function, we mark it as divergent, hence the `fn() -> !` signature.
+#[no_mangle]
+pub fn start() -> ! {
+    // Our first program initializes some variables on the stack and does nothing more. Yay!
+    let x = 42;
+    let y = x;
 
-// Entry point for this program
-#[start]
-fn start(_argc: isize, _argv: *const *const u8) -> isize {
-    0
+    // We can't return from this function so we just spin endlessly here.
+    loop {}
 }
 
-// These functions and traits are used by the compiler, but not
-// for a bare-bones hello world. These are normally
-// provided by libstd.
-#[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"] extern fn panic_fmt() -> ! { loop {} }
+// Ignore this part for now :-). It will covered in a later section.
+mod vector_table {
+    #[link_section = ".reset"]
+    static RESET: fn() -> ! = ::start;
+}
+
+// Finally, we need to define the panic_fmt "lang item", which is just a function. This specifies
+// what the program should do when a `panic!` occurs. Our program won't panic, so we can leave the
+// function body empty for now.
+mod lang_items {
+    #[lang = "panic_fmt"]
+    extern fn panic_fmt() {}
+}
