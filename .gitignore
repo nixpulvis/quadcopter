@@ -1,0 +1,7 @@
+target
+
+**/*.o
+
+hardware/*
+!hardware/Makefile
+!hardware/spec.tex
