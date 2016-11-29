@@ -1,7 +1,0 @@
-#!/usr/bin/env ruby
-
-$LOAD_PATH.unshift(File.expand_path('../../lib', __FILE__))
-require 'bundler/setup'
-require 'imu_visualization'
-
-IMUVisualization.new("IMU Visualization", 800, 800)

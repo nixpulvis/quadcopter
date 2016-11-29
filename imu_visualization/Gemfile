@@ -1,4 +1,0 @@
-source 'http://rubygems.org'
-
-gem 'gel', :path => '../gel'
-gem 'serial_communicator', :path => '../serial_communicator'
