@@ -1,14 +1,4 @@
 [root]
 name = "quadcopter"
 version = "0.2.0"
-dependencies = [
- "gcc 0.3.36 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
-[[package]]
-name = "gcc"
-version = "0.3.36"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[metadata]
-"checksum gcc 0.3.36 (registry+https://github.com/rust-lang/crates.io-index)" = "7ba4da09e2b9daa3da0e3f260c8ffa03c8b1aca9a7d885230dc85717ece64b1e"

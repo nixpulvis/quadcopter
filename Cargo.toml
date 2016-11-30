@@ -2,9 +2,9 @@
 name = "quadcopter"
 version = "0.2.0"
 authors = ["Nathan Lilienthal <nlilienthal@apple.com>"]
-build = "build.rs"
+
+[[bin]]
+name = "quadcopter"
+doc = false
 
 [dependencies]
-
-[build-dependencies]
-gcc = "0.3"

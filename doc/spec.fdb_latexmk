@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1480437457 "spec.tex" "spec.pdf" "spec" 1480439639
+["pdflatex"] 1480437457 "spec.tex" "spec.pdf" "spec" 1480526934
   "/usr/local/texlive/2016/texmf-dist/fonts/map/fontname/texfonts.map" 1272929888 3287 e6b82fe08f5336d4d5ebc73fb1152e87 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm" 1136768653 1328 c834bbb027764024c09d3d2bf908b5f0 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/cm/cmbx12.tfm" 1136768653 1324 c910af8c371558dc20f2d7822f66fe64 ""
@@ -139,8 +139,8 @@
   "spec.tex" 1480437421 5286 7be9523c559f56dbe2b083a5208004cd ""
   "spec.toc" 1480437458 407 72f3243242d682d5061e62abefa1ff91 ""
   (generated)
+  "spec.log"
   "spec.out"
   "spec.toc"
   "spec.aux"
-  "spec.log"
   "spec.pdf"
