@@ -1,4 +1,4 @@
 //! This is a spec
-//! ![](./diagram.png)
+//! ![](https://raw.githubusercontent.com/nixpulvis/quadcopter/next/src/hardware/diagram.png)
 
 pub mod parts;
