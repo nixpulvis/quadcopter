@@ -8,3 +8,4 @@ name = "quadcopter"
 doc = false
 
 [dependencies]
+clap = "*"
