@@ -39,8 +39,8 @@ Every power pad has a + or - mark beside it.
 * The PM02 measures all the current, motors and electronics alike, because
   everything downstream of it runs through this board.
 * Signal ground (the front strip) only meets GND_ESC through the FC.
-* C1 (1000 µF 35 V low-ESR) sits across the ESC bus. C3 is an optional second
-  cap footprint, not fitted by default.
+* C1 and C2 (1000 µF 35 V low-ESR each) sit across the ESC bus, one on each
+  side, so the board stays balanced.
 * Power pads connect solidly to the pours (no thermal reliefs), so use a big
   iron for the XT60 and wire pads.
 

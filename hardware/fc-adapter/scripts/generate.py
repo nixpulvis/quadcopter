@@ -75,9 +75,9 @@ part("P2", "fc-adapter", "WirePad", "FC VBAT-", "fc-adapter:WirePad_14AWG",
 part("C1", "Device", "C_Polarized", "1000uF 35V",
      "Capacitor_THT:CP_Radial_D12.5mm_P5.00mm",
      {"1": "VBAT_ESC", "2": "GND_ESC"}, (37.5, 2.5), 90, sch=(76.2, 101.6))
-part("C3", "Device", "C_Polarized", "DNP 2nd cap",
+part("C2", "Device", "C_Polarized", "1000uF 35V",
      "Capacitor_THT:CP_Radial_D12.5mm_P5.00mm",
-     {"1": "VBAT_ESC", "2": "GND_ESC"}, (-37.5, 2.5), 90, sch=(99.06, 101.6), dnp=True)
+     {"1": "VBAT_ESC", "2": "GND_ESC"}, (-37.5, 2.5), 90, sch=(99.06, 101.6))
 
 # ESC power pads. ArduPilot Quad X: M1 front-right, M2 rear-left,
 # M3 front-left, M4 rear-right.
@@ -185,6 +185,7 @@ for m in (1, 2, 3, 4):
 ASSEMBLY = {
     "J1": ("Amass XT60PW-M", "", "fit"),
     "C1": ("1000uF 35V low-ESR electrolytic, 12.5mm radial, 5mm pitch", "", "fit"),
+    "C2": ("1000uF 35V low-ESR electrolytic, 12.5mm radial, 5mm pitch", "", "fit"),
     "J5": ("JST BM06B-GHS-TBT", "", "fit"),
     "J7": ("JST BM04B-GHS-TBT", "", "fit"),
     "J9": ("JST BM06B-GHS-TBT", "", "fit"),
@@ -294,7 +295,7 @@ def build_schematic():
     notes = [
         ((25.4, 25.4), "POWER PATH (rev A): battery -> Holybro PM02 (current sense) -> J1 XT60 -> ESC bus.\n"
                        "ESC bus -> M1..M4 ESC pads, P1/P2 (FC VBAT) -> FC VBAT pads.\n"
-                       "C1: low-ESR. Signal GND only meets GND_ESC through the FC."),
+                       "C1, C2: low-ESR, one each side for balance. Signal GND only meets GND_ESC through the FC."),
         ((165.1, 25.4), "ESC signal headers: pin 2 (ESC BEC +5V) is left unconnected,\n"
                         "so the ESC plugs fit unmodified without back-feeding the FC's servo rail.\n"
                         "J3 is wired to the FC's S1-S4 and G pads.\n"
@@ -495,7 +496,7 @@ def build_board():
             fp.SetProperty("JLCPCB", fit)
         if p["dnp"]:
             fp.SetAttributes(fp.GetAttributes() | pcbnew.FP_EXCLUDE_FROM_BOM | pcbnew.FP_EXCLUDE_FROM_POS_FILES)
-        if p["ref"].startswith(("H", "ZT", "P", "J", "C1", "C3", "F")):
+        if p["ref"].startswith(("H", "ZT", "P", "J", "C1", "C2", "F")):
             fp.Reference().SetVisible(False)
         fp.Value().SetVisible(False)
         # The XT60's own +/- marks are unreadable at this size; the board
