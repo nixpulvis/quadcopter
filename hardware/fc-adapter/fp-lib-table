@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "fc-adapter")(type "KiCad")(uri "${KIPRJMOD}/lib/fc-adapter.pretty")(options "")(descr "Project-local footprints"))
+)

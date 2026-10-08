@@ -1,0 +1,5 @@
+Schematic vs board net check
+schematic pins with nets: 55, board pads with nets: 55
+parts only in schematic: none
+parts only on board: none
+pin/net mismatches: 0

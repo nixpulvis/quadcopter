@@ -1,0 +1,5 @@
+Comment,Designator,Footprint,LCSC Part #
+"1000uF 35V low-ESR electrolytic, 12.5mm radial, 5mm pitch","C1,C2",CP_Radial_D12.5mm_P5.00mm,
+Amass XT60PW-M,J1,AMASS_XT60PW-M_1x02_P7.20mm_Horizontal,
+JST BM06B-GHS-TBT,"J5,J9",JST_GH_BM06B-GHS-TBT_1x06-1MP_P1.25mm_Vertical,
+JST BM04B-GHS-TBT,J7,JST_GH_BM04B-GHS-TBT_1x04-1MP_P1.25mm_Vertical,
