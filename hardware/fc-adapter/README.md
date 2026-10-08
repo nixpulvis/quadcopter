@@ -1,6 +1,6 @@
 # FC adapter / power board (rev A)
 
-A 94 × 94 mm, 2-layer, 2 oz copper, 2.0 mm FR4 board that bolts rigidly to the
+A 94 × 94 mm, 2-layer, 1 oz copper, 1.6 mm FR4 board that bolts rigidly to the
 frame's nylon standoffs. It carries the battery connector, the 4-way ESC power
 bus, the ESC signal header, and plug-in ports for the receiver, GPS + Remote ID and PM02. It holds the Lumenier LUX F765 NDAA flight controller
 (38 × 38 mm, 30.5 mm M3) on standoffs with rubber grommets.
@@ -127,14 +127,18 @@ scripts/export.sh             # renders (docs/) and Gerbers (fab/)
 
 Use the Python that ships with KiCad (`python3.12` on Ubuntu 24.04's KiCad 7).
 `scripts/route.py` (Freerouting) is only needed if signal nets come back that
-`generate.py` doesn't route itself. `export.sh` writes `fab/fc-adapter-gerbers.zip` for JLCPCB
-(choose 2 oz outer copper and 2.0 mm thickness when ordering).
+`generate.py` doesn't route itself. `export.sh` writes `fab/fc-adapter-gerbers.zip`. Rev A is ordered as bare
+boards from OSH Park's standard 2-layer service (1.6 mm, 1 oz, ENIG), with the
+parts hand-soldered: the XT60 (J1), C1, C2 and the three GH sockets (J5, J7,
+J9) besides the headers and wires. The power pours span the whole board, so
+1 oz is enough; OSH Park's 2 oz service only comes as a 0.8 mm board, too
+flexible for one that carries the FC.
 
-### Ordering with assembly (JLCPCB)
+### Ordering with assembly (JLCPCB, not used for rev A)
 
 `export.sh` also writes `fab/jlcpcb-bom.csv` and `fab/jlcpcb-cpl.csv`. Upload
 them with the Gerber zip and pick PCB Assembly. They list only the parts
-JLCPCB fits: the XT60 (J1), C1 and the three GH sockets (J5, J7, J9). The rest
+JLCPCB fits: the XT60 (J1), C1, C2 and the three GH sockets (J5, J7, J9). The rest
 (the ESC and FC LINK headers, wire pads and the FC lead pad rows) is soldered
 by hand. Those parts are marked with `MPN`, `LCSC` and `JLCPCB` fields, which
 are set in `ASSEMBLY` in `scripts/generate.py`.

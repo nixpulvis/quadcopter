@@ -358,7 +358,7 @@ def text(board, t, x, y, layer=pcbnew.F_SilkS, size=1.0, angle=0, bold=False, wi
     tx.SetPosition(P(x, y))
     tx.SetLayer(layer)
     tx.SetTextSize(pcbnew.VECTOR2I(mm(width or size), mm(size)))
-    # JLCPCB's minimum silkscreen line is 0.15 mm.
+    # 0.15 mm minimum silkscreen line (JLCPCB; OSH Park allows less).
     tx.SetTextThickness(mm(max(0.15, size * (0.2 if bold else 0.15))))
     tx.SetTextAngleDegrees(angle)
     if layer in (pcbnew.B_SilkS, pcbnew.B_Cu, pcbnew.B_Mask):
@@ -446,24 +446,23 @@ STACKUP = """    (stackup
       (layer "F.SilkS" (type "Top Silk Screen"))
       (layer "F.Paste" (type "Top Solder Paste"))
       (layer "F.Mask" (type "Top Solder Mask") (thickness 0.01))
-      (layer "F.Cu" (type "copper") (thickness 0.07))
-      (layer "dielectric 1" (type "core") (thickness 1.84) (material "FR4") (epsilon_r 4.5) (loss_tangent 0.02))
-      (layer "B.Cu" (type "copper") (thickness 0.07))
+      (layer "F.Cu" (type "copper") (thickness 0.035))
+      (layer "dielectric 1" (type "core") (thickness 1.51) (material "FR4") (epsilon_r 4.5) (loss_tangent 0.02))
+      (layer "B.Cu" (type "copper") (thickness 0.035))
       (layer "B.Mask" (type "Bottom Solder Mask") (thickness 0.01))
       (layer "B.Paste" (type "Bottom Solder Paste"))
       (layer "B.SilkS" (type "Bottom Silk Screen"))
-      (copper_finish "HAL lead-free")
+      (copper_finish "ENIG")
       (dielectric_constraints no)
     )
 """
 
 
 def set_stackup(path):
-    """2 oz copper on a 2.0 mm board. The stackup isn't exposed to Python in
+    """OSH Park 2-layer: 1 oz copper on a 1.6 mm board, ENIG. The stackup isn't exposed to Python in
     KiCad 7, so patch it into the saved file."""
     s = open(path).read()
     s = s.replace("(setup\n", "(setup\n" + STACKUP, 1)
-    s = s.replace("(thickness 1.6)", "(thickness 2)", 1)
     open(path, "w").write(s)
 
 
@@ -517,7 +516,7 @@ def build_board():
         p["fpobj"] = fp
 
     outline(board)
-    board.GetDesignSettings().SetBoardThickness(mm(2.0))
+    board.GetDesignSettings().SetBoardThickness(mm(1.6))
 
     w, h = BOARD_W / 2, BOARD_H / 2
     F, B = pcbnew.F_Cu, pcbnew.B_Cu
@@ -616,7 +615,7 @@ def write_project_rules():
     d = json.load(open(pro)) if os.path.exists(pro) else {}
     rules = d.setdefault("board", {}).setdefault("design_settings", {}).setdefault("rules", {})
     rules.update({
-        # JLCPCB 2-layer, 2 oz copper limits, with margin.
+        # Within OSH Park and JLCPCB 2-layer limits, with margin.
         "min_clearance": 0.2, "min_track_width": 0.2, "min_via_diameter": 0.6,
         "min_via_annular_width": 0.15, "min_through_hole_diameter": 0.3,
         "min_hole_clearance": 0.25, "min_hole_to_hole": 0.3,
@@ -732,7 +731,7 @@ def silk(board):
     for i, line in enumerate(("rev A  2026-10",
                               "FC: Lumenier LUX F765 (30.5 mm M3)",
                               "Battery -> PM02 -> XT60",
-                              "2 oz Cu, 2.0 mm FR4",
+                              "1 oz Cu, 1.6 mm FR4",
                               "github.com/nixpulvis/quadcopter")):
         text(board, line, 0, -2.5 + 2.2 * i, B, 1.0)
 
