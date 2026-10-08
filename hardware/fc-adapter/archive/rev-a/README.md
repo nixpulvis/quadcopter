@@ -1,6 +1,6 @@
 # Rev A fab files (archived)
 
-The board as ordered from OSH Park on 2026-10-08, built from commit 4dd9a79.
+The rev A board for the OSH Park order (2026-10-08), built from commit 4dd9a79.
 
 - `fc-adapter-gerbers.zip`: Gerbers, drill files and job file. OSH Park standard
   2-layer service: 1.6 mm FR4, 1 oz copper, ENIG.
