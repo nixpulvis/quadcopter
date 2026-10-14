@@ -117,8 +117,10 @@ been confirmed on this radio yet:
   byte, and the passthrough fields are little-endian. The decoder is tested
   against an encoder ported from ArduPilot, not against a real FC.
 - The scroll wheel arrives as `EVT_VIRTUAL_NEXT`/`PREV` (or `EVT_ROT_*`).
-- The CRSF receive queue is shared: any other Lua script that pops it (such
-  as the planned ELRS boot script) will steal frames from this one.
+- The CRSF receive queue is shared with the ELRS boot script
+  (`SCRIPTS/QUAD/elrs.lua` from `quadctl`). They take turns: this script only
+  pops frames while a receiver is linked, and the boot script only while none
+  is.
 
 ### Test without the radio
 

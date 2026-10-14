@@ -82,6 +82,12 @@ local function loadCfg()
   end
 end
 
+-- Telemetry is "up" while the RX is reporting link quality.
+local function linkUp()
+  local rssi = getRSSI()
+  return rssi ~= nil and rssi > 0
+end
+
 -- Passthrough --------------------------------------------------------------
 --
 -- ArduPilot wraps FrSky passthrough packets (appid + 32-bit value) in CRSF
@@ -127,8 +133,10 @@ local function u32(d, i)
   return d[i] + d[i + 1] * 256 + d[i + 2] * 65536 + d[i + 3] * 16777216
 end
 
+-- Only while a receiver is linked: with no link there is no passthrough,
+-- and the ELRS boot script (SCRIPTS/QUAD/elrs.lua) owns the queue.
 local function pollCrsf()
-  if crossfireTelemetryPop == nil then return end
+  if crossfireTelemetryPop == nil or not linkUp() then return end
   for _ = 1, 10 do
     local cmd, d = crossfireTelemetryPop()
     if cmd == nil then return end
@@ -225,12 +233,6 @@ end
 local function init()
   loadCfg()
   st.lastTick = getTime()
-end
-
--- Telemetry is "up" while the RX is reporting link quality.
-local function linkUp()
-  local rssi = getRSSI()
-  return rssi ~= nil and rssi > 0
 end
 
 -- Mode and armed state: from passthrough when fresh, else from the CRSF
