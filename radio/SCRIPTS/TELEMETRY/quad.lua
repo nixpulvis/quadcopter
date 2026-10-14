@@ -306,10 +306,12 @@ local function drawStats(up)
   rows[#rows + 1] = { "Sat", sats and fmt("%d", math.floor(sats)) or "--",
                       (sats and sats < 6) and BLINK or 0 }
 
-  -- Height above the arming point; GPS altitude alone is MSL.
-  local alt = num("Alt")
-  if alt and st.home and st.home.alt then alt = alt - st.home.alt else alt = nil end
-  rows[#rows + 1] = { "Alt", alt and fmt("%dm", math.floor(alt + 0.5)) or "--", 0 }
+  -- Height above the arming point / GPS altitude above sea level.
+  local msl = num("Alt")
+  local rel = nil
+  if msl and st.home and st.home.alt then rel = msl - st.home.alt end
+  local function m(v) return v and fmt("%d", math.floor(v + 0.5)) or "--" end
+  rows[#rows + 1] = { "A", (rel or msl) and m(rel) .. "/" .. m(msl) or "--", 0 }
 
   local spd = num("GSpd")
   rows[#rows + 1] = { "Spd", spd and fmt("%d", math.floor(spd + 0.5)) or "--", 0 }
