@@ -43,6 +43,7 @@ class State:
     radio_sticks: dict[int, str] | None = None   # channel -> roll/pitch/throttle/yaw
     radio_module_crsf: bool | None = None
     radio_boot_script: bool | None = None
+    fc_tune_script: bool | None = None           # the menu script on the FC matches quad.yaml
     edgetx_version: str | None = None
     elrs_tx: dict[str, str] | None = None
     elrs_tx_version: str | None = None
@@ -62,6 +63,7 @@ def desired_state(cfg: QuadConfig, d: Desired) -> State:
         radio_sticks=sticks,
         radio_module_crsf=True,
         radio_boot_script=True,
+        fc_tune_script=True if d.tune_targets else None,
         elrs_tx=dict(d.elrs),
     )
 
@@ -263,6 +265,41 @@ def rule_fence_usb_only(cfg, d, s, out):
             out.append(Finding("error", "security-fence", f"{name}={_f(v)}, quad.yaml says {_f(want)}"))
 
 
+def rule_tuning(cfg, d, s, out):
+    """The dial only ever tunes a quad.yaml target, with that target's range."""
+    tun = cfg.tuning
+    knob = tun["knob"]["channel"] if tun else None
+    if knob is not None:
+        _channel(s, knob, out, "tuning")
+    if tun and s.fc_tune_script is False:
+        out.append(Finding("error", "tuning", f"APM/scripts/{c.TUNE_SCRIPT} on the FC is missing or differs from quad.yaml; run apply"))
+    if s.fc_params is None:
+        return
+    for ch in range(1, 17):
+        v = s.fc_params.get(f"RC{ch}_OPTION")
+        if v is None:
+            continue
+        if int(v) == c.RC_OPTION_TUNING2:
+            out.append(Finding("error", "tuning", f"RC{ch}_OPTION=220 adds a second tuning knob outside quad.yaml"))
+        elif int(v) == c.RC_OPTION_TUNING and ch != knob:
+            out.append(Finding("error", "tuning", f"RC{ch}_OPTION=219 makes CH{ch} a tuning knob; quad.yaml's is {f'CH{knob}' if knob else 'unset'}"))
+    t2 = s.fc_params.get("TUNE2")
+    if t2 is not None and int(t2) != 0:
+        out.append(Finding("error", "tuning", f"TUNE2={int(t2)}: a second tuning target outside quad.yaml"))
+    tune = s.fc_params.get("TUNE")
+    if tune is None or int(tune) == 0:
+        return
+    t = next((x for x in d.tune_targets if x["tune"] == int(tune)), None)
+    if t is None:
+        out.append(Finding("error", "tuning", f"TUNE={int(tune)} isn't one of quad.yaml's tuning targets"))
+        return
+    lo, hi = s.fc_params.get("TUNE_MIN"), s.fc_params.get("TUNE_MAX")
+    if lo is None or hi is None or abs(lo - t["min"]) > PARAM_TOL * max(1, t["min"]) or abs(hi - t["max"]) > PARAM_TOL * max(1, t["max"]):
+        out.append(Finding("error", "tuning", f"TUNE is {t['name']} but TUNE_MIN/MAX are {_f(lo or 0)}..{_f(hi or 0)}, quad.yaml says {_f(t['min'])}..{_f(t['max'])}"))
+    else:
+        out.append(Finding("info", "tuning", f"the dial tunes {t['name']} ({t['param']}) until the next reboot"))
+
+
 def rule_plain_crsf(cfg, d, s, out):
     """Security rule: ELRS stays plain CRSF (no MAVLink over the RC link)."""
     ser = cfg["rx"]["serial"]
@@ -280,6 +317,8 @@ def rule_fc_drift(cfg, d, s, out):
     for name, want in d.fc_params.items():
         if name.startswith(("FENCE_", "AVOID_")):
             continue  # reported by rule_fence_usb_only
+        if name in c.TUNE_MENU_PARAMS:
+            continue  # the FC menu may change these in RAM; rule_tuning checks them
         got = s.fc_params.get(name)
         if got is None:
             out.append(Finding("warn", "fc-params", f"{name} missing on the FC (wrong firmware?)"))
@@ -332,6 +371,7 @@ RULES = [
     rule_telemetry,
     rule_battery,
     rule_fence_usb_only,
+    rule_tuning,
     rule_plain_crsf,
     rule_fc_drift,
     rule_radio_boot,

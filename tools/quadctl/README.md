@@ -45,6 +45,7 @@ shows what the script did with each setting; ENTER drops hand-made overrides so
 - **SC**: Fly / RTL / Land, mixed onto CH6.
 - **SD**: Fly / Acro, mixed onto CH6. A strict override: the only way out of Acro is SD.
 - **SE** (CH7, `RC7_OPTION` 33): hold to Brake. Forced off while SD is in Acro.
+- **S1** dial (CH8, `RC8_OPTION` 219): transmitter tuning, see below.
 
 In Fly the switch below decides; any other position REPLACEs the channel with
 a fixed value. EdgeTX runs the lines in order and the last active REPLACE wins,
@@ -59,13 +60,37 @@ Each output sits mid-slot: SB 1167/1295/1423 us (slots 1-3), RTL 1556 (4), Land
 the FC's `FLTMODE` slots and aux options. CH6 needs ELRS Switch Mode **Wide**;
 Hybrid would quantize it.
 
+## Tuning dial (S1)
+
+ArduPilot moves one gain live with the dial: `TUNE` picks which one, and the dial
+sweeps it from `TUNE_MIN` to `TUNE_MAX`. The tuned value is in RAM only, so it's
+gone after a reboot unless you note it and save it (QGC).
+
+You pick the target over the air in the FC's **Quad Tune** menu: ELRS Lua >
+Other Devices > the flight controller > Quad Tune. `fc/scripts/quadtune.lua`
+(installed by `apply` as `APM/scripts/quadtune.lua`, with `SCR_ENABLE 1`) builds
+that menu from `tuning.targets` in `quad.yaml`:
+
+- **Target**: Off or one of the listed targets. It also sets that target's
+  `TUNE_MIN`/`MAX` from the list, so a range can never be paired with the wrong
+  gain. The radio only sends a row number.
+- A new target is accepted only while disarmed; Off works any time.
+- Everything is RAM only (never saved), so every boot starts Off. `apply` also
+  writes `TUNE 0` and `TUNE_MIN = TUNE_MAX = 0` (a dial that does nothing).
+- **Value** shows the live value of the gain being tuned.
+
+The default ranges are centred on ArduCopter's defaults, so the dial's middle is
+stock: Rate P 0.07-0.20 (0.135), Rate D 0.0016-0.0056 (0.0036), Acro rate
+180-540 deg/s (360). Centre the dial before picking a target, because the gain
+jumps to the dial's position the moment one is set.
+
 ## What goes where
 
 - **FC params** (`compile.py`): channel map, arm switch, mode channel and every
   `FLTMODE` slot, RX port and the `RC_OPTIONS` bits quadctl owns, battery and
-  failsafes, fence. Everything else (calibration, PIDs) is never touched.
+  failsafes, fence, tuning knob (plus the menu script on the FC's SD card). Everything else (calibration, PIDs) is never touched.
 - **Pocket model** (`radio.py`): every mix line on the channels quadctl owns
-  (CH5 arm, CH6 mode), replaced in the model's YAML; other channels and the rest
+  (CH5 arm, CH6 mode, CH7 brake, CH8 tuning dial), replaced in the model's YAML; other channels and the rest
   of the file stay byte-identical. Scripts from
   `radio/SCRIPTS/` and `SCRIPTS/QUAD/elrs.cfg` are copied to the card.
 - **ELRS module** (`radio/SCRIPTS/QUAD/elrs.lua`): reads `elrs.cfg` at power-up and,
@@ -111,6 +136,10 @@ params are still applied normally). Plain `flash` does only required flashes;
   (fence breach = SmartRTL, which retraces the path back inside, falling back to RTL
   then Land; avoidance backs the quad away from the fence in Loiter/AltHold).
 - The RX port stays RCIN (not MAVLink) and ELRS `Link Mode` must be `Normal`.
+- The one over-the-air setting is the tuning target, and only as a row of
+  `quad.yaml`'s list: `verify` fails on a `TUNE` outside the list, a range that
+  doesn't match its row, a second knob (`RCx_OPTION` 220 or `TUNE2`), a tuning
+  knob on another channel, or a menu script that differs from what quadctl wrote.
 
 ## Not verified on hardware yet
 
@@ -125,7 +154,10 @@ confirmed with `quadctl pull` on the real devices:
 - ELRS option text (`Dyn`, `100`) and the version bytes in the device-info frame.
 - That function scripts can use `crossfireTelemetryPush/Pop` and share the
   `quadElrs` global with the Tools page.
-- MAVLink FTP writing `/APM/quadctl.json` on this board, and `uploader.py` on macOS.
+- MAVLink FTP writing `/APM/quadctl.json` and `/APM/scripts/quadtune.lua` on this board, and `uploader.py` on macOS.
+- The Pocket's dial as mix source `S1`, and the ELRS Lua listing the FC's CRSF
+  menu under Other Devices. The menu API itself was checked against the
+  Copter-4.7.2 source (`AP_CRSF_SCRIPTING_ENABLED` holds for this board), not run.
 - The Pocket's MCU (STM32F4) for the DFU check, and the EdgeTX `.bin` start address.
 
 ## Tests

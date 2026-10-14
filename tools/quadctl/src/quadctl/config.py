@@ -22,6 +22,18 @@ COPTER_MODES = {
 # Fence (11) is deliberately absent: no switch may touch the fence.
 AUX_OPTIONS = {"Brake": 33}
 
+# TUNE values the tuning menu may offer, with the param each one moves (shown
+# live in the menu). ArduCopter/defines.h and tuning.cpp, Copter-4.7.2.
+TUNE_PARAMS = {
+    1: "ATC_ANG_RLL_P",    # Stab Roll/Pitch kP
+    4: "ATC_RAT_RLL_P",    # Rate Roll/Pitch kP
+    5: "ATC_RAT_RLL_I",    # Rate Roll/Pitch kI
+    21: "ATC_RAT_RLL_D",   # Rate Roll/Pitch kD
+    6: "ATC_RAT_YAW_P",    # Rate Yaw kP
+    25: "ACRO_RP_RATE",    # Acro Roll/Pitch deg/s
+    40: "ACRO_Y_RATE",     # Acro Yaw deg/s
+}
+
 CHANNEL_ORDERS = {"AETR", "TAER", "AERT", "RETA"}
 FAILSAFE_ACTIONS = {"rtl", "land"}
 FENCE_TYPES = {"altitude": 1, "circle": 2, "polygon": 4}
@@ -71,6 +83,10 @@ class QuadConfig:
     @property
     def aux(self) -> list[dict]:
         return list(self.raw.get("aux") or [])
+
+    @property
+    def tuning(self) -> dict | None:
+        return self.raw.get("tuning")
 
     @property
     def elrs(self) -> dict[str, str]:
@@ -210,6 +226,10 @@ def validate(raw: dict) -> None:
         if off is not None and (not isinstance(off, str) or not re.fullmatch(r"S[A-Z]\d", off)):
             e.append(f"{where}.disabled_by: a switch position like SD1")
 
+    tun = raw.get("tuning")
+    if tun is not None:
+        _validate_tuning(tun, used, e)
+
     if _need(raw, "rx.protocol", e, str) not in (None, "crsf"):
         e.append("rx.protocol: only crsf is supported (security rule: plain CRSF)")
     ser = _need(raw, "rx.serial", e, int)
@@ -265,3 +285,49 @@ def validate(raw: dict) -> None:
                 e.append(f"elrs.{k}: '=' and newlines aren't allowed")
     if e:
         raise ConfigError(e)
+
+
+def _validate_tuning(tun, used: dict[int, str], e: list[str]) -> None:
+    if not isinstance(tun, dict):
+        e.append("tuning: expected a mapping")
+        return
+    knob = tun.get("knob")
+    if not isinstance(knob, dict):
+        e.append("tuning.knob: expected { channel, source }")
+    else:
+        ch = knob.get("channel")
+        if not isinstance(ch, int) or not 5 <= ch <= 16:
+            e.append("tuning.knob.channel: must be 5..16")
+        elif ch in used:
+            e.append(f"tuning.knob.channel: CH{ch} already used by {used[ch]}")
+        else:
+            used[ch] = "tuning.knob"
+        if not isinstance(knob.get("source"), str) or not re.fullmatch(r"[SP]\d", knob["source"]):
+            e.append("tuning.knob.source: EdgeTX pot name like S1")
+    targets = tun.get("targets")
+    if not isinstance(targets, list) or not 1 <= len(targets) <= 8:
+        e.append("tuning.targets: a list of 1 to 8 targets")
+        return
+    seen_names, seen_tunes = set(), set()
+    for i, t in enumerate(targets):
+        where = f"tuning.targets[{i}]"
+        if not isinstance(t, dict):
+            e.append(f"{where}: expected a mapping")
+            continue
+        name = t.get("name")
+        if not isinstance(name, str) or not 1 <= len(name) <= 16 or any(ch in name for ch in ';"\\\n'):
+            e.append(f"{where}.name: 1-16 characters, no ; or quotes")
+        elif name in seen_names or name == "Off":
+            e.append(f"{where}.name: {name} is used twice (Off is built in)")
+        else:
+            seen_names.add(name)
+        tune = t.get("tune")
+        if tune not in TUNE_PARAMS:
+            e.append(f"{where}.tune: one of {sorted(TUNE_PARAMS)} (ArduCopter TUNE values quadctl knows)")
+        elif tune in seen_tunes:
+            e.append(f"{where}.tune: TUNE {tune} is listed twice")
+        else:
+            seen_tunes.add(tune)
+        lo, hi = t.get("min"), t.get("max")
+        if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (lo, hi)) or not 0 < lo < hi:
+            e.append(f"{where}: needs 0 < min < max")

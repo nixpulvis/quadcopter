@@ -34,6 +34,7 @@ STOCK = {
     "BATT_CAPACITY": 3300, "BATT_LOW_VOLT": 10.5, "BATT_CRT_VOLT": 0,
     "BATT_FS_LOW_ACT": 0, "BATT_FS_CRT_ACT": 0, "MOT_BAT_CURR_MAX": 0, "FS_THR_ENABLE": 1,
     "FENCE_ENABLE": 0, "FENCE_TYPE": 7, "FENCE_ALT_MAX": 100, "FENCE_RADIUS": 300, "FENCE_ACTION": 1,
+    "TUNE": 0, "TUNE_MIN": 0, "TUNE_MAX": 0, "TUNE2": 0, "SCR_ENABLE": 0,
     "AVOID_ENABLE": 3, "AVOID_MARGIN": 2, "AVOID_BACKUP_SPD": 0.75,
     "INS_ACCOFFS_X": 0.0123,
 }
@@ -136,6 +137,7 @@ def repo(tmp_path):
     (root / "config").mkdir(parents=True)
     shutil.copy(ROOT / "config" / "quad.yaml", root / "config" / "quad.yaml")
     shutil.copytree(ROOT / "radio", root / "radio")
+    shutil.copytree(ROOT / "fc", root / "fc")
     card = tmp_path / "card"
     (card / "RADIO").mkdir(parents=True)
     (card / "RADIO" / "radio.yml").write_text("semver: 2.10.5\n")
@@ -150,6 +152,9 @@ def test_apply_end_to_end(fake, repo, monkeypatch, capsys):
     monkeypatch.setattr(FC, "read_stamp", lambda self: None)
     monkeypatch.setattr(FC, "write_stamp", lambda self, s: None)
     monkeypatch.setattr(cli, "eject", lambda v: None)
+    files = {}
+    monkeypatch.setattr(FC, "get_file", lambda self, path: files.get(path))
+    monkeypatch.setattr(FC, "put_file", lambda self, path, text: files.__setitem__(path, text))
     base = ["--root", str(root), "--port", port, "--volume", str(card), "-y"]
 
     assert cli.main(base + ["apply"]) == 0
@@ -159,6 +164,9 @@ def test_apply_end_to_end(fake, repo, monkeypatch, capsys):
     assert int(f.params["RC_OPTIONS"]) == 32 | (1 << 13) | (1 << 11) | (1 << 8)
     assert f.params["INS_ACCOFFS_X"] == pytest.approx(0.0123)  # unowned params untouched
     assert f.reboots == 1  # SERIAL/RCMAP/RC_OPTIONS-type change
+    assert f.params["RC8_OPTION"] == 219 and f.params["SCR_ENABLE"] == 1
+    script = files["/APM/scripts/quadtune.lua"]
+    assert 'name = "Rate P", tune = 4, min = 0.07, max = 0.2' in script
     assert (card / "SCRIPTS/FUNCTIONS/qelrs.lua").exists()
     assert "Packet Rate=150Hz" in (card / "SCRIPTS/QUAD/elrs.cfg").read_text()
     assert list((root / "backups").iterdir())
@@ -168,6 +176,23 @@ def test_apply_end_to_end(fake, repo, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "ERROR" not in out
     assert "not checked: ELRS" in out
+
+    # A target picked from the FC menu (RAM) is fine; one outside quad.yaml isn't.
+    f.params.update(TUNE=4, TUNE_MIN=0.07, TUNE_MAX=0.2)
+    assert cli.main(base + ["verify"]) == 0
+    assert "the dial tunes Rate P" in capsys.readouterr().out
+    f.params.update(TUNE=5, TUNE_MIN=0, TUNE_MAX=1)
+    assert cli.main(base + ["verify"]) == 1
+    assert "TUNE=5 isn't one of" in capsys.readouterr().out
+    f.params.update(TUNE=0, TUNE_MIN=0, TUNE_MAX=0)
+
+    # A changed menu script is caught.
+    files["/APM/scripts/quadtune.lua"] += "-- edited\n"
+    assert cli.main(base + ["verify"]) == 1
+    assert "quadtune.lua on the FC is missing or differs" in capsys.readouterr().out
+    del files["/APM/scripts/quadtune.lua"]
+    assert cli.main(base + ["plan"]) == 0
+    assert "install /APM/scripts/quadtune.lua" in capsys.readouterr().out
 
     # A hand edit in QGC is caught.
     f.params["RC8_OPTION"] = 11

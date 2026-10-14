@@ -14,9 +14,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import checks, firmware, radio
-from .compile import compile_config, defaults_file
+from .compile import TUNE_SCRIPT, compile_config, defaults_file, tune_script
 from .config import ConfigError, load
-from .fc import FC, FCError, needs_reboot, read_param_file, write_param_file
+from .fc import SCRIPTS_DIR, FC, FCError, needs_reboot, read_param_file, write_param_file
 
 PARAM_TOL = 1e-3
 
@@ -32,6 +32,8 @@ class Ctx:
     fc_params: dict | None = None
     fc_info: object = None
     fc_stamp: dict | None = None
+    fc_script: str | None = None       # the tuning menu script on the FC, if read
+    fc_script_read: bool = False
     volume: Path | None = None
     model: radio.ModelFile | None = None
     elrs: radio.ElrsState | None = None
@@ -39,6 +41,14 @@ class Ctx:
     @property
     def scripts(self) -> Path:
         return self.root / "radio" / "SCRIPTS"
+
+    @property
+    def tune_script(self) -> str | None:
+        """The FC tuning menu script quad.yaml wants, or None without tuning."""
+        if not self.desired.tune_targets:
+            return None
+        template = (self.root / "fc" / "scripts" / TUNE_SCRIPT).read_text()
+        return tune_script(template, self.desired.tune_targets)
 
     def want(self, device: str) -> bool:
         return self.args.only in (None, device)
@@ -88,6 +98,12 @@ def connect(ctx: Ctx, required: bool) -> None:
                 ctx.fc_stamp = ctx.fc.read_stamp()
             except Exception as e:  # FTP unsupported or SD missing
                 say(f"FC: couldn't read the quadctl stamp ({e})")
+            if ctx.desired.tune_targets:
+                try:
+                    ctx.fc_script = ctx.fc.get_file(f"{SCRIPTS_DIR}/{TUNE_SCRIPT}")
+                    ctx.fc_script_read = True
+                except Exception as e:
+                    say(f"FC: couldn't read {SCRIPTS_DIR}/{TUNE_SCRIPT} ({e})")
         except FCError as e:
             if required:
                 raise SystemExit(f"FC: {e}")
@@ -110,6 +126,11 @@ def observed_state(ctx: Ctx) -> checks.State:
         s.fc_params = ctx.fc_params
         s.fc_version = ctx.fc_info.version
         s.fc_board = ctx.fc_info.board
+        if ctx.desired.tune_targets:
+            if ctx.fc_script_read:
+                s.fc_tune_script = ctx.fc_script == ctx.tune_script
+            else:
+                s.skipped.append(f"FC {TUNE_SCRIPT} (MAVLink FTP)")
     else:
         s.skipped.append("FC")
     if ctx.model is not None:
@@ -184,6 +205,9 @@ def print_plan(ctx: Ctx) -> bool:
             missing = "  (missing on FC!)" if cur is None else ""
             say(f"  {name}: {_f(cur)} -> {_f(v)}{reboot}{missing}")
         any_change |= bool(ch)
+        if script_pending(ctx):
+            say(f"  install {SCRIPTS_DIR}/{TUNE_SCRIPT}  (needs reboot)")
+            any_change = True
     if ctx.model is not None:
         mix = ctx.model.plan_mixes(ctx.desired.radio_mixes)
         scripts = radio.scripts_pending(ctx.volume, ctx.scripts)
@@ -209,6 +233,11 @@ def print_plan(ctx: Ctx) -> bool:
     return any_change
 
 
+def script_pending(ctx: Ctx) -> bool:
+    want = ctx.tune_script
+    return want is not None and ctx.fc_script != want
+
+
 def _f(v) -> str:
     if v is None:
         return "-"
@@ -230,6 +259,8 @@ def backup(ctx: Ctx) -> Path:
     if ctx.fc_params is not None:
         write_param_file(out / "fc.param", ctx.fc_params)
         info = ctx.fc_info
+        if ctx.fc_script is not None:
+            (out / TUNE_SCRIPT).write_text(ctx.fc_script)
         (out / "fc.json").write_text(json.dumps(
             {"version": info.version, "git_hash": info.git_hash, "board": info.board, "stamp": ctx.fc_stamp}, indent=2))
     if ctx.model is not None:
@@ -351,7 +382,15 @@ def apply_fc(ctx: Ctx) -> None:
     if left:
         raise SystemExit("FC: params didn't stick: " + ", ".join(left) +
                          "\nThe Pocket was not touched. Restore with `quadctl restore <backup>`.")
-    if any(needs_reboot(n) for n in changes) and confirm(ctx.args, "FC: some changes need a reboot. reboot now?"):
+    script = script_pending(ctx)
+    if script:
+        path = f"{SCRIPTS_DIR}/{TUNE_SCRIPT}"
+        fc.put_file(path, ctx.tune_script)
+        if fc.get_file(path) != ctx.tune_script:
+            raise SystemExit(f"FC: {path} didn't read back as written. The Pocket was not touched.")
+        ctx.fc_script = ctx.tune_script
+        say(f"FC: installed {path}")
+    if (script or any(needs_reboot(n) for n in changes)) and confirm(ctx.args, "FC: some changes need a reboot. reboot now?"):
         fc.reboot()
         say("FC: rebooting")
         time.sleep(5)

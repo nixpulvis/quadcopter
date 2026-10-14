@@ -94,3 +94,37 @@ def test_bad_configs_are_rejected(edit, needle):
     with pytest.raises(config.ConfigError) as e:
         config.loads(dump(r))
     assert needle in str(e.value)
+
+
+def test_tuning_knob_compiles_off():
+    d = compile_config(config.load(QUAD))
+    p = d.resolve_params()
+    assert p["RC8_OPTION"] == 219 and p["SCR_ENABLE"] == 1
+    assert p["TUNE"] == 0 and p["TUNE_MIN"] == p["TUNE_MAX"] == 0 and p["TUNE2"] == 0
+    knob = [m for m in d.radio_mixes if m.channel == 8]
+    assert [(m.source, m.weight, m.offset) for m in knob] == [("S1", 100, 0)]
+    assert [t["name"] for t in d.tune_targets] == ["Rate P", "Rate D", "Acro rate"]
+    assert d.tune_targets[0]["param"] == "ATC_RAT_RLL_P"
+
+
+def test_tune_script_renders_targets():
+    from quadctl.compile import tune_script
+    d = compile_config(config.load(QUAD))
+    text = tune_script((ROOT / "fc" / "scripts" / "quadtune.lua").read_text(), d.tune_targets)
+    assert "quadctl:targets" not in text
+    assert 'name = "Acro rate", tune = 25, min = 180.0, max = 540.0, param = "ACRO_RP_RATE"' in text
+
+
+@pytest.mark.parametrize("edit, msg", [
+    (lambda r: r["tuning"]["targets"].append({"name": "Fence", "tune": 38, "min": 0, "max": 1}), "tune: one of"),
+    (lambda r: r["tuning"]["targets"][0].update(min=0.3), "0 < min < max"),
+    (lambda r: r["tuning"]["targets"][1].update(name="Rate P"), "used twice"),
+    (lambda r: r["tuning"]["targets"][0].update(name="A;B"), "no ; or quotes"),
+    (lambda r: r["tuning"]["knob"].update(channel=7), "CH7 already used"),
+    (lambda r: r["tuning"]["knob"].update(source="SA"), "pot name"),
+])
+def test_tuning_validation(edit, msg):
+    r = raw()
+    edit(r)
+    with pytest.raises(config.ConfigError, match=msg):
+        config.loads(dump(r))

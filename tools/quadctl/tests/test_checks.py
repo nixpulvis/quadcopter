@@ -127,3 +127,32 @@ def test_avoidance_fence_bit_off_is_a_security_error():
     cfg, d, s = setup()
     s.fc_params["AVOID_ENABLE"] = 2  # proximity only
     assert "security-fence" in rules(checks.run(cfg, d, s))
+
+
+def test_second_tuning_knob_is_an_error():
+    cfg, d, s = setup()
+    s.fc_params["RC9_OPTION"] = 220
+    s.fc_params["TUNE2"] = 4
+    msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "tuning"]
+    assert any("RC9_OPTION=220" in m for m in msgs) and any("TUNE2=4" in m for m in msgs)
+
+
+def test_tune_target_with_wrong_range_is_an_error():
+    cfg, d, s = setup()
+    s.fc_params.update(TUNE=21, TUNE_MIN=0.0016, TUNE_MAX=0.2)  # Rate D with Rate P's top
+    assert "tuning" in rules(checks.run(cfg, d, s))
+
+
+def test_tune_target_from_menu_is_info():
+    cfg, d, s = setup()
+    s.fc_params.update(TUNE=25, TUNE_MIN=180, TUNE_MAX=540)
+    f = checks.run(cfg, d, s)
+    assert rules(f) == set() and "tuning" in rules(f, "info")
+
+
+def test_knob_moved_to_another_channel_is_an_error():
+    cfg, d, s = setup()
+    s.fc_params["RC8_OPTION"] = 0
+    s.fc_params["RC10_OPTION"] = 219
+    f = checks.run(cfg, d, s)
+    assert "tuning" in rules(f) and "fc-params" in rules(f)

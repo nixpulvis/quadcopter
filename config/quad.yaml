@@ -30,6 +30,18 @@ switches:
 aux:
   - { channel: 7, switch: SE, option: Brake, disabled_by: SD1 }  # hold to brake; off in Acro
 
+# S1 dial = ArduPilot transmitter tuning (RCx_OPTION 219). The dial sets the
+# chosen gain live, in RAM only. The FC's "Quad Tune" CRSF menu (ELRS Lua >
+# Other Devices) picks the target from this list only, while disarmed, and
+# every boot starts Off. Ranges are centred on ArduCopter's defaults, so the
+# dial's middle is stock. Only quadctl over USB can change this list.
+tuning:
+  knob: { channel: 8, source: S1 }
+  targets:
+    - { name: Rate P,    tune: 4,  min: 0.07,   max: 0.20 }    # ATC_RAT_RLL_P/PIT_P (0.135)
+    - { name: Rate D,    tune: 21, min: 0.0016, max: 0.0056 }  # ATC_RAT_RLL_D/PIT_D (0.0036)
+    - { name: Acro rate, tune: 25, min: 180,    max: 540 }     # ACRO_RP_RATE deg/s (360)
+
 rx:
   serial: 7              # UART7, the LUX F765 Receiver socket
   protocol: crsf

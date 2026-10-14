@@ -14,9 +14,10 @@ from pymavlink import mavutil
 
 USB_PRODUCT = "LumenierLUXF765_NDAA"
 STAMP_PATH = "/APM/quadctl.json"
+SCRIPTS_DIR = "/APM/scripts"
 
 # Params ArduPilot only reads at boot.
-REBOOT_PREFIXES = ("SERIAL", "RCMAP_", "BATT_MONITOR", "BATT_VOLT_PIN", "BATT_CURR_PIN", "RC_OPTIONS")
+REBOOT_PREFIXES = ("SERIAL", "RCMAP_", "BATT_MONITOR", "BATT_VOLT_PIN", "BATT_CURR_PIN", "RC_OPTIONS", "SCR_")
 
 
 class FCError(Exception):
@@ -169,28 +170,40 @@ class FC:
         from pymavlink import mavftp
         return mavftp.MAVFTP(self.conn, self.conn.target_system, self.conn.target_component)
 
-    def read_stamp(self) -> dict | None:
+    def get_file(self, path: str) -> str | None:
+        """A text file from the FC's SD card, or None if it isn't there."""
         ftp = self._ftp()
         with tempfile.TemporaryDirectory() as d:
-            local = os.path.join(d, "stamp.json")
-            ftp.cmd_get([STAMP_PATH, local])
+            local = os.path.join(d, "file")
+            ftp.cmd_get([path, local])
             ret = ftp.process_ftp_reply("get", timeout=10)
             if ret.error_code != 0 or not os.path.exists(local):
                 return None
-            try:
-                return json.loads(Path(local).read_text())
-            except ValueError:
-                return None
+            return Path(local).read_text()
 
-    def write_stamp(self, stamp: dict) -> None:
+    def put_file(self, path: str, text: str) -> None:
         ftp = self._ftp()
+        parent = path.rsplit("/", 1)[0]
+        if parent:
+            ftp.cmd_mkdir([parent])  # fails harmlessly if it exists
+            ftp.process_ftp_reply("mkdir", timeout=5)
         with tempfile.TemporaryDirectory() as d:
-            local = os.path.join(d, "stamp.json")
-            Path(local).write_text(json.dumps(stamp, indent=2, sort_keys=True))
-            ftp.cmd_put([local, STAMP_PATH])
+            local = os.path.join(d, "file")
+            Path(local).write_text(text)
+            ftp.cmd_put([local, path])
             ret = ftp.process_ftp_reply("put", timeout=10)
             if ret.error_code != 0:
-                raise FCError(f"couldn't write {STAMP_PATH} over MAVLink FTP ({ret.error_code})")
+                raise FCError(f"couldn't write {path} over MAVLink FTP ({ret.error_code})")
+
+    def read_stamp(self) -> dict | None:
+        text = self.get_file(STAMP_PATH)
+        try:
+            return json.loads(text) if text else None
+        except ValueError:
+            return None
+
+    def write_stamp(self, stamp: dict) -> None:
+        self.put_file(STAMP_PATH, json.dumps(stamp, indent=2, sort_keys=True))
 
 
 def _name(param_id) -> str:

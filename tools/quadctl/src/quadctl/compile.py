@@ -6,7 +6,7 @@ import itertools
 import re
 from dataclasses import dataclass, field
 
-from .config import AUX_OPTIONS, COPTER_MODES, FENCE_TYPES, QuadConfig
+from .config import AUX_OPTIONS, COPTER_MODES, FENCE_TYPES, TUNE_PARAMS, QuadConfig
 
 # ArduPilot RCx_OPTION values (RC_Channel.cpp, Copter-4.7.2).
 RC_OPTION_ARMDISARM = 153
@@ -14,6 +14,13 @@ RC_OPTION_LAND = 18
 RC_OPTION_RTL = 4
 RC_OPTION_ACRO = 52
 RC_OPTION_FENCE = 11
+RC_OPTION_TUNING = 219
+RC_OPTION_TUNING2 = 220
+
+# Params the FC tuning menu may set in RAM (checked by rule_tuning, not as drift).
+TUNE_MENU_PARAMS = ("TUNE", "TUNE_MIN", "TUNE_MAX")
+TUNE_SCRIPT = "quadtune.lua"
+TUNE_MARKER = "local TARGETS = {} -- quadctl:targets"
 
 # RC_OPTIONS bits (RC_Channels_VarInfo.h, Copter-4.7.2).
 RC_OPT_CRSF_PASSTHROUGH = 1 << 8
@@ -117,6 +124,8 @@ class Desired:
     # every (switch positions, expected flight mode) the mode channel must produce
     mode_outputs: list[tuple[dict[str, tuple[int, int]], str]] = field(default_factory=list)
     radio_model: str = ""
+    # transmitter tuning targets the FC menu may pick: {name, tune, min, max, param}
+    tune_targets: list[dict] = field(default_factory=list)
     elrs: dict[str, str] = field(default_factory=dict)
 
     def owned_params(self) -> set[str]:
@@ -157,6 +166,20 @@ def compile_config(cfg: QuadConfig) -> Desired:
         d.radio_mixes.append(Mix(a["channel"], a["switch"]))
         if a.get("disabled_by"):
             d.radio_mixes.append(Mix(a["channel"], "MAX", -100, 0, a["disabled_by"], "REPLACE"))
+    tun = cfg.tuning
+    if tun:
+        # S1 dial straight onto its channel; the FC applies it to TUNE's target.
+        # TUNE starts Off (and MIN = MAX turns the dial off too); the FC menu
+        # script picks a target in RAM only.
+        k = tun["knob"]
+        p[f"RC{k['channel']}_OPTION"] = RC_OPTION_TUNING
+        d.radio_mixes.append(Mix(k["channel"], k["source"]))
+        p.update({"TUNE": 0, "TUNE_MIN": 0, "TUNE_MAX": 0, "TUNE2": 0, "SCR_ENABLE": 1})
+        d.tune_targets = [
+            {"name": t["name"], "tune": int(t["tune"]), "min": float(t["min"]), "max": float(t["max"]),
+             "param": TUNE_PARAMS[t["tune"]]}
+            for t in tun["targets"]
+        ]
     centers = [1165, 1295, 1425, 1555, 1685, 1875]
     for slot in range(1, 7):
         # Every slot gets the mode of the nearest output, so a slightly-off
@@ -258,6 +281,16 @@ def mode_outputs(mode, overrides) -> list[tuple[dict[str, tuple[int, int]], str]
                 name = o.modes[p]
         out.append((pos, name))
     return out
+
+
+def tune_script(template: str, targets: list[dict]) -> str:
+    """The FC menu script with quad.yaml's targets filled in."""
+    if TUNE_MARKER not in template:
+        raise ValueError(f"{TUNE_SCRIPT}: marker line missing")
+    rows = ",\n".join(
+        f'  {{ name = "{t["name"]}", tune = {t["tune"]}, min = {t["min"]!r}, max = {t["max"]!r}, param = "{t["param"]}" }}'
+        for t in targets)
+    return template.replace(TUNE_MARKER, "local TARGETS = { -- written by quadctl from quad.yaml\n" + rows + "\n}", 1)
 
 
 def defaults_file(d: Desired, current: dict[str, float] | None = None) -> str:
