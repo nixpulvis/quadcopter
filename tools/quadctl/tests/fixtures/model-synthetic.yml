@@ -1,0 +1,70 @@
+semver: 2.10.5
+header:
+  name: "QUAD550"
+  bitmap: ""
+timers:
+  0:
+    swtch: "NONE"
+    mode: OFF
+noGlobalFunctions: 0
+expoData:
+  -
+    srcRaw: Ail
+    carryTrim: 0
+    chn: 0
+    weight: 100
+  -
+    srcRaw: Ele
+    carryTrim: 0
+    chn: 1
+    weight: 100
+  -
+    srcRaw: Thr
+    carryTrim: 0
+    chn: 2
+    weight: 100
+  -
+    srcRaw: Rud
+    carryTrim: 0
+    chn: 3
+    weight: 100
+mixData:
+  -
+    destCh: 0
+    srcRaw: I0
+    weight: 100
+    mltpx: ADD
+  -
+    destCh: 1
+    srcRaw: I1
+    weight: 100
+    mltpx: ADD
+  -
+    destCh: 2
+    srcRaw: I2
+    weight: 100
+    mltpx: ADD
+  -
+    destCh: 3
+    srcRaw: I3
+    weight: 100
+    mltpx: ADD
+  -
+    destCh: 5
+    srcRaw: SC
+    weight: 50
+    offset: 10
+    mltpx: ADD
+moduleData:
+  0:
+    type: TYPE_CROSSFIRE
+    subType: 0
+customFn:
+  0:
+    swtch: "ON"
+    func: PLAY_SCRIPT
+    def: "qelrs"
+telemetrySensors:
+  0:
+    id: 0
+    label: "1RSS"

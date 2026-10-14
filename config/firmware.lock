@@ -1,0 +1,18 @@
+# Exact firmware per chip. `quadctl flash` compares what each chip runs with
+# this file and flashes only what differs. `quadctl lock` downloads every url
+# and fills in sha256 (and the FC's git hash); commit the result.
+fc:
+  version: 4.7.2
+  url: https://firmware.ardupilot.org/Copter/stable-4.7.2/LumenierLUXF765-NDAA/arducopter.apj
+  sha256: null
+  git_hash: null
+fc_uploader:
+  # ArduPilot's own bootloader uploader, pinned to the same release.
+  url: https://raw.githubusercontent.com/ArduPilot/ardupilot/Copter-4.7.2/Tools/scripts/uploader.py
+  sha256: ef8b6e2bcc597fc5c2901cebeddfc78c242ae03ef710f9d892e8d35f745b716e
+edgetx:
+  version: null   # fill in after milestone 0 shows what the Pocket runs
+  url: null       # Pocket .bin from the EdgeTX release (or a CloudBuild from Buddy)
+  sha256: null
+elrs:
+  version: null   # TX module and RP1; flashed with ExpressLRS Configurator for now

@@ -1,0 +1,26 @@
+[project]
+name = "quadctl"
+version = "0.1.0"
+description = "Configure the quad's FC, Pocket radio and ELRS module from one quad.yaml"
+requires-python = ">=3.10"
+dependencies = [
+  "pymavlink>=2.4.40",
+  "pyserial>=3.5",
+  "ruamel.yaml>=0.18",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "lupa>=2.0"]
+
+[project.scripts]
+quadctl = "quadctl.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

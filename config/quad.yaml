@@ -1,0 +1,61 @@
+# Source of truth for the quad and the Pocket. `quadctl check` validates it;
+# `quadctl plan` / `apply` push it to the FC (USB serial) and the Pocket (USB
+# storage). See tools/quadctl/README.md.
+version: 1
+
+firmware:
+  # Version patterns. Exact builds and hashes live in firmware.lock.
+  ardupilot: "4.7.*"
+  board: LumenierLUXF765-NDAA
+  edgetx: "*"            # pin once milestone 0 shows what the Pocket runs
+  elrs: "3.*"            # TX module and RP1 must match each other
+
+model:
+  name: QUAD550          # EdgeTX model to patch, matched by name
+  channel_order: AETR    # CH1 roll, CH2 pitch, CH3 throttle, CH4 yaw
+
+# EdgeTX switch names on the Pocket. Confirm against the radio (SYS > Hardware).
+switches:
+  arm:  { channel: 5, switch: SA, positions: 2 }
+  mode: { channel: 6, switch: SB, positions: 3, modes: [Stabilize, Loiter, RTL] }
+  land: { channel: 7, switch: SD, positions: 2 }
+
+rx:
+  serial: 7              # UART7, the LUX F765 Receiver socket
+  protocol: crsf
+  baud_420k: true        # RC_OPTIONS bit 13
+  lq_as_rssi: true       # RC_OPTIONS bit 11, RSSI_TYPE 3
+
+battery:
+  cells: 3
+  capacity_mah: 5000
+  low_volt_per_cell: 3.5
+  critical_volt_per_cell: 3.3
+  current_max_a: 70      # MOT_BAT_CURR_MAX
+  monitor: pm02_v3
+  amp_per_volt: null     # PM02 V3 scale: take from Holybro docs, then check with a clamp meter
+
+failsafe:
+  rc: rtl
+  battery_low: rtl
+  battery_critical: land
+
+fence:
+  enable: true
+  type: [altitude, circle]
+  alt_max_m: 120
+  radius_m: 150
+  action: rtl
+
+# Applied on the radio by SCRIPTS/FUNCTIONS/qelrs.lua. Values are the option
+# text the ELRS Lua shows; keys are the field labels.
+elrs:
+  Packet Rate: 150Hz
+  Telem Ratio: "1:4"
+  Switch Mode: Wide
+  Max Power: 100
+  Dynamic: "Dyn"         # ELRS 3 options: Off, Dyn, AUX9..AUX12 (confirm on the radio)
+  Link Mode: Normal      # never MAVLink (security rule); ignored on ELRS < 3.5
+
+telemetry:
+  passthrough: true      # RC_OPTIONS bit 8, for Yaapu or our own telemetry script
