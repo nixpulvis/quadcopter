@@ -242,8 +242,8 @@ def validate(raw: dict) -> None:
             e.append("fence.type: polygon fences aren't supported yet")
     _need(raw, "fence.alt_max_m", e, (int, float))
     _need(raw, "fence.radius_m", e, (int, float))
-    if _need(raw, "fence.action", e, str) not in (None, "rtl", "land", "brake", "report"):
-        e.append("fence.action: brake, rtl, land or report")
+    if _need(raw, "fence.action", e, str) not in (None, "smartrtl", "rtl", "land", "brake", "report"):
+        e.append("fence.action: smartrtl, rtl, brake, land or report")
     avoid = (raw.get("fence") or {}).get("avoid")
     if avoid is not None:
         m = avoid.get("margin_m") if isinstance(avoid, dict) else None

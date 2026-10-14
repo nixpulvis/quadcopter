@@ -32,7 +32,7 @@ STICKS = {"A": "roll", "E": "pitch", "T": "throttle", "R": "yaw"}
 
 FS_THR = {"rtl": 1, "land": 3}
 BATT_FS = {"rtl": 2, "land": 1}
-FENCE_ACTION = {"report": 0, "rtl": 1, "land": 2, "brake": 4}  # 4 = Brake or Land
+FENCE_ACTION = {"report": 0, "rtl": 1, "land": 2, "smartrtl": 3, "brake": 4}  # 3 = SmartRTL or RTL or Land
 
 
 def pct_to_pwm(pct: float) -> int:

@@ -30,7 +30,7 @@ def test_repo_config_compiles():
     assert p["SERIAL7_PROTOCOL"] == 23
     assert int(p["RC_OPTIONS"]) & (1 << 13)
     assert p["BATT_LOW_VOLT"] == 10.5 and p["BATT_CRT_VOLT"] == 9.9
-    assert p["FENCE_TYPE"] == 3 and p["FENCE_ACTION"] == 4  # Brake or Land
+    assert p["FENCE_TYPE"] == 3 and p["FENCE_ACTION"] == 3  # SmartRTL or RTL or Land
     assert int(p["AVOID_ENABLE"]) & 1 and p["AVOID_BACKUP_SPD"] == 0.75 and p["AVOID_MARGIN"] == 2
 
 
