@@ -7,7 +7,7 @@ from quadctl import radio
 from quadctl.compile import Mix
 
 FIX = ROOT / "tools" / "quadctl" / "tests" / "fixtures" / "model-synthetic.yml"
-WANT = [Mix(5, "SA"), Mix(6, "SB", 25, -40),
+WANT = [Mix(5, "SA"), Mix(6, "SB", 25, -40), Mix(6, "MAX", 11, 0, "SD1", "REPLACE"),
         Mix(6, "MAX", 36, 0, "SC1", "REPLACE"), Mix(6, "MAX", 100, 0, "SC2", "REPLACE")]
 
 

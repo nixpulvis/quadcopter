@@ -15,13 +15,16 @@ model:
   channel_order: AETR    # CH1 roll, CH2 pitch, CH3 throttle, CH4 yaw
 
 # EdgeTX switch names on the Pocket. Confirm against the radio (SYS > Hardware).
-# The override switch is mixed onto the mode channel: Fly hands control to the
-# mode switch, the other positions force their mode (one FLTMODE channel, so
-# ArduPilot always sees a single source of truth). SD is free.
+# Overrides are mixed onto the mode channel, lowest priority first: in Fly the
+# switch below decides, any other position forces its mode, and a later
+# override always beats an earlier one (SC RTL/Land beats SD Acro). ArduPilot
+# sees one mode channel, so the switches can't disagree.
 switches:
-  arm:      { channel: 5, switch: SA, positions: 2 }
-  mode:     { channel: 6, switch: SB, positions: 3, modes: [Loiter, AltHold, Stabilize] }
-  override: { switch: SC, positions: 3, modes: [Fly, RTL, Land] }
+  arm:  { channel: 5, switch: SA, positions: 2 }
+  mode: { channel: 6, switch: SB, positions: 3, modes: [Loiter, AltHold, Stabilize] }
+  overrides:
+    - { switch: SD, positions: 2, modes: [Fly, Acro] }
+    - { switch: SC, positions: 3, modes: [Fly, RTL, Land] }
 
 rx:
   serial: 7              # UART7, the LUX F765 Receiver socket

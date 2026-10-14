@@ -145,8 +145,8 @@ def compile_config(cfg: QuadConfig) -> Desired:
     p[f"RC{mode.channel}_OPTION"] = 0
     p["FLTMODE_CH"] = mode.channel
     d.radio_mixes.append(Mix(arm.channel, arm.switch))
-    d.radio_mixes.extend(mode_mixes(mode, sw.get("override")))
-    d.mode_outputs = mode_outputs(mode, sw.get("override"))
+    d.radio_mixes.extend(mode_mixes(mode, cfg.overrides))
+    d.mode_outputs = mode_outputs(mode, cfg.overrides)
     lines = [m for m in d.radio_mixes if m.channel == mode.channel]
     pwms = [(pct_to_pwm(channel_pct(lines, pos)), name) for pos, name in d.mode_outputs]
     centers = [1165, 1295, 1425, 1555, 1685, 1875]
@@ -199,37 +199,49 @@ def compile_config(cfg: QuadConfig) -> Desired:
     return d
 
 
-def mode_slots(mode, override) -> tuple[list[int], list[int]]:
-    """FLTMODE slots for the mode switch positions and the override positions."""
+def mode_slots(mode, overrides) -> tuple[list[int], list[list[int]]]:
+    """FLTMODE slots for the mode switch positions, and for each override's
+    non-Fly positions (packed at the top, in order)."""
     base = [1, 2, 3] if mode.positions == 3 else [1, 3]
-    k = len(override.modes) - 1 if override else 0
-    return base, list(range(7 - k, 7))
+    k = sum(len(o.modes) - 1 for o in overrides)
+    slot = 7 - k
+    over = []
+    for o in overrides:
+        over.append(list(range(slot, slot + len(o.modes) - 1)))
+        slot += len(o.modes) - 1
+    return base, over
 
 
-def mode_mixes(mode, override) -> list[Mix]:
-    """Mode switch on the mode channel, with the override switch REPLACEing it.
+def mode_mixes(mode, overrides) -> list[Mix]:
+    """Mode switch on the mode channel, with override switches REPLACEing it.
 
     The mode switch line puts each position in the middle of its slot (one
     linear line: weight 25, offset -40 gives -65/-40/-15 %). Each override
     position past the first (Fly) replaces the channel with a fixed value.
+    EdgeTX runs the lines in order and the last active REPLACE wins, so a
+    later override beats an earlier one, whatever order they were flipped in.
     """
-    base, over = mode_slots(mode, override)
+    base, over = mode_slots(mode, overrides)
     lo, hi = SLOT_PCT[base[0] - 1], SLOT_PCT[base[-1] - 1]
     weight, offset = (hi - lo) / 2, (hi + lo) / 2
     out = [Mix(mode.channel, mode.switch, weight, offset)]
-    for j, slot in enumerate(over, start=1):
-        out.append(Mix(mode.channel, "MAX", SLOT_PCT[slot - 1], 0, f"{override.switch}{j}", "REPLACE"))
+    for o, slots in zip(overrides, over):
+        for j, slot in enumerate(slots, start=1):
+            out.append(Mix(mode.channel, "MAX", SLOT_PCT[slot - 1], 0, f"{o.switch}{j}", "REPLACE"))
     return out
 
 
-def mode_outputs(mode, override) -> list[tuple[dict[str, tuple[int, int]], str]]:
+def mode_outputs(mode, overrides) -> list[tuple[dict[str, tuple[int, int]], str]]:
+    """Every combination of switch positions and the mode it must select."""
     out = []
-    o_count = override.positions if override else 1
-    for mpos, opos in itertools.product(range(mode.positions), range(o_count)):
-        pos = {mode.switch: (mpos, mode.positions)}
-        if override:
-            pos[override.switch] = (opos, override.positions)
-        name = mode.modes[mpos] if opos == 0 else override.modes[opos]
+    ranges = [range(mode.positions)] + [range(o.positions) for o in overrides]
+    for combo in itertools.product(*ranges):
+        pos = {mode.switch: (combo[0], mode.positions)}
+        name = mode.modes[combo[0]]
+        for o, p in zip(overrides, combo[1:]):
+            pos[o.switch] = (p, o.positions)
+            if p:
+                name = o.modes[p]
         out.append((pos, name))
     return out
 

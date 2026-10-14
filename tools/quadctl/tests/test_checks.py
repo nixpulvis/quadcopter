@@ -51,7 +51,7 @@ def test_mode_switch_weight_change_lands_on_wrong_mode():
 
 def test_override_line_missing_is_caught():
     cfg, d, s = setup()
-    s.radio_mixes[6] = s.radio_mixes[6][:2]  # Land line deleted on the radio
+    s.radio_mixes[6] = s.radio_mixes[6][:3]  # Land line deleted on the radio
     msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
     assert any("SC down" in m and "expected Land" in m for m in msgs)
 
@@ -61,6 +61,15 @@ def test_fltmode_slot_changed_in_qgc():
     s.fc_params["FLTMODE6"] = 0
     msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
     assert any("expected Land" in m for m in msgs)
+
+
+def test_override_order_swapped_on_radio():
+    # SC lines before the SD line: Acro would beat RTL/Land.
+    cfg, d, s = setup()
+    l = s.radio_mixes[6]
+    s.radio_mixes[6] = [l[0], l[2], l[3], l[1]]
+    msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
+    assert any("SD down" in m and "expected RTL" in m for m in msgs)
 
 
 def test_hybrid_switch_mode_is_an_error():

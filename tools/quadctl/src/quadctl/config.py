@@ -51,10 +51,18 @@ class QuadConfig:
     def switches(self) -> dict[str, Switch]:
         out = {}
         for role, s in self.raw["switches"].items():
+            if role == "overrides":
+                continue
             ch = s.get("channel")
             out[role] = Switch(role, int(ch) if ch is not None else None, str(s["switch"]),
                                int(s["positions"]), list(s.get("modes", [])))
         return out
+
+    @property
+    def overrides(self) -> list[Switch]:
+        """Mode overrides, lowest priority first (a later one wins)."""
+        return [Switch(f"override{i}", None, str(s["switch"]), int(s["positions"]), list(s["modes"]))
+                for i, s in enumerate(self.raw["switches"].get("overrides") or [])]
 
     @property
     def elrs(self) -> dict[str, str]:
@@ -112,17 +120,24 @@ def validate(raw: dict) -> None:
     for role in ("arm", "mode"):
         if role not in sw:
             e.append(f"missing switches.{role}")
-    for role, s in sw.items():
-        if role not in ("arm", "mode", "override"):
-            e.append(f"switches.{role}: unknown role (arm, mode, override)")
+    entries = [(role, s) for role, s in sw.items() if role != "overrides"]
+    ovr = sw.get("overrides") or []
+    if not isinstance(ovr, list):
+        e.append("switches.overrides: expected a list")
+        ovr = []
+    entries += [(f"overrides[{i}]", s) for i, s in enumerate(ovr)]
+    for role, s in entries:
+        is_override = role.startswith("overrides")
+        if not is_override and role not in ("arm", "mode"):
+            e.append(f"switches.{role}: unknown role (arm, mode, overrides)")
             continue
         if not isinstance(s, dict):
             e.append(f"switches.{role}: expected a mapping")
             continue
         ch = s.get("channel")
-        if role == "override":
+        if is_override:
             if ch is not None:
-                e.append("switches.override: has no channel; it is mixed onto the mode channel")
+                e.append(f"switches.{role}: has no channel; overrides are mixed onto the mode channel")
         elif not isinstance(ch, int) or not 5 <= ch <= 16:
             e.append(f"switches.{role}.channel: must be 5..16 (1-4 are sticks)")
         elif ch in used:
@@ -138,19 +153,20 @@ def validate(raw: dict) -> None:
             e.append(f"switches.{role}.switch: {name} already used by {names[name]}")
         else:
             names[name] = role
-    for role in ("mode", "override"):
-        s = sw.get(role)
-        if not isinstance(s, dict):
+        if role == "arm":
             continue
         modes = s.get("modes") or []
         if len(modes) != s.get("positions"):
             e.append(f"switches.{role}.modes: one mode per switch position")
         for i, m in enumerate(modes):
-            if role == "override" and i == 0:
+            if is_override and i == 0:
                 if m != "Fly":
-                    e.append("switches.override.modes: first position must be Fly (mode switch decides)")
+                    e.append(f"switches.{role}.modes: first position must be Fly (the switch below it decides)")
             elif m not in COPTER_MODES:
                 e.append(f"switches.{role}.modes: unknown ArduCopter mode {m!r}")
+    extra = sum(max(len(s.get("modes") or []) - 1, 0) for s in ovr if isinstance(s, dict))
+    if extra + 3 > 6:
+        e.append(f"switches.overrides: {extra} override modes plus the mode switch need more than ArduPilot's 6 FLTMODE slots")
     if "arm" in sw and isinstance(sw["arm"], dict):
         if sw["arm"].get("channel") != 5:
             e.append("switches.arm.channel: ELRS treats CH5 (AUX1) as the arm channel; keep arm on CH5")
