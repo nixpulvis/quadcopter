@@ -42,20 +42,22 @@ shows what the script did with each setting; ENTER drops hand-made overrides so
 
 - **SA** (CH5): arm.
 - **SB** (CH6): Loiter / AltHold / Stabilize.
-- **SD**: Fly / Acro, mixed onto CH6.
-- **SC**: Fly / RTL / Land, mixed onto CH6, and beats SD.
+- **SC**: Fly / RTL / Land, mixed onto CH6.
+- **SD**: Fly / Acro, mixed onto CH6. A strict override: the only way out of Acro is SD.
+- **SE** (CH7, `RC7_OPTION` 33): hold to Brake. Forced off while SD is in Acro.
 
 In Fly the switch below decides; any other position REPLACEs the channel with
 a fixed value. EdgeTX runs the lines in order and the last active REPLACE wins,
-so the priority is fixed (SC > SD > SB) no matter which switch moved last, and
-ArduPilot only ever sees one mode channel.
+so the priority is fixed (SD > SC > SB) no matter which switch moved last, and
+ArduPilot only ever sees one mode channel. (The FC can still change mode by
+itself, for example a failsafe RTL.)
 
-Each output sits mid-slot: SB 1167/1295/1423 us (slots 1-3), Acro 1556 (4), RTL
-1684 (5), Land 2012 (6), at least 63 us from any band edge. That uses all six
-`FLTMODE` slots, so another mode switch (say SE as Brake) would go on its own
-aux channel. `checks.py` evaluates the real mix lines for all 18 combinations
-against the FC's `FLTMODE` slots. CH6 needs ELRS Switch Mode **Wide**; Hybrid
-would quantize it.
+Each output sits mid-slot: SB 1167/1295/1423 us (slots 1-3), RTL 1556 (4), Land
+1684 (5), Acro 2012 (6), at least 63 us from any band edge. That uses all six
+`FLTMODE` slots, so any further switch goes on its own aux channel like SE.
+`checks.py` evaluates the real mix lines for every switch combination against
+the FC's `FLTMODE` slots and aux options. CH6 needs ELRS Switch Mode **Wide**;
+Hybrid would quantize it.
 
 ## What goes where
 
@@ -116,7 +118,7 @@ confirmed with `quadctl pull` on the real devices:
 
 - EdgeTX YAML names: `mixData`/`destCh`/`srcRaw`, stick sources `Ail/Ele/Thr/Rud`,
   `moduleData.0.type: TYPE_CROSSFIRE`, `customFn` `PLAY_SCRIPT`, `semver` in `radio.yml`.
-- The Pocket's switch names (`SA`-`SD` in `quad.yaml`) and EdgeTX's
+- The Pocket's switch names (`SA`-`SE` in `quad.yaml`; SE taken as a 2-position momentary) and EdgeTX's
   switch-position names in mix lines (`SC1` = middle, `SC2` = down, `SD1` = down), plus `MAX` and `REPLACE`.
 - ELRS option text (`Dyn`, `100`) and the version bytes in the device-info frame.
 - That function scripts can use `crossfireTelemetryPush/Pop` and share the

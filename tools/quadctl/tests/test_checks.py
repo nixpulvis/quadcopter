@@ -51,25 +51,40 @@ def test_mode_switch_weight_change_lands_on_wrong_mode():
 
 def test_override_line_missing_is_caught():
     cfg, d, s = setup()
-    s.radio_mixes[6] = s.radio_mixes[6][:3]  # Land line deleted on the radio
+    l = s.radio_mixes[6]
+    s.radio_mixes[6] = [l[0], l[1], l[3]]  # Land line deleted on the radio
     msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
-    assert any("SC down" in m and "expected Land" in m for m in msgs)
+    assert any("SC down" in m and "SD up" in m and "expected Land" in m for m in msgs)
 
 
 def test_fltmode_slot_changed_in_qgc():
     cfg, d, s = setup()
     s.fc_params["FLTMODE6"] = 0
     msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
-    assert any("expected Land" in m for m in msgs)
+    assert any("expected Acro" in m for m in msgs)
 
 
 def test_override_order_swapped_on_radio():
-    # SC lines before the SD line: Acro would beat RTL/Land.
+    # SD line before the SC lines: RTL/Land would beat Acro.
     cfg, d, s = setup()
     l = s.radio_mixes[6]
-    s.radio_mixes[6] = [l[0], l[2], l[3], l[1]]
+    s.radio_mixes[6] = [l[0], l[3], l[1], l[2]]
     msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
-    assert any("SD down" in m and "expected RTL" in m for m in msgs)
+    assert any("SD down" in m and "expected Acro" in m for m in msgs)
+
+
+def test_brake_must_be_gated_in_acro():
+    cfg, d, s = setup()
+    s.radio_mixes[7] = s.radio_mixes[7][:1]  # gate line removed
+    msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "aux"]
+    assert any("SD1 active" in m and "off" in m for m in msgs)
+
+
+def test_brake_option_changed_in_qgc():
+    cfg, d, s = setup()
+    s.fc_params["RC7_OPTION"] = 11
+    f = checks.run(cfg, d, s)
+    assert {"aux", "security-fence"} <= rules(f)
 
 
 def test_hybrid_switch_mode_is_an_error():
@@ -80,7 +95,7 @@ def test_hybrid_switch_mode_is_an_error():
 
 def test_extra_land_switch_warns():
     cfg, d, s = setup()
-    s.fc_params["RC7_OPTION"] = 18  # left over from the bench plan
+    s.fc_params["RC8_OPTION"] = 18  # a stray Land switch
     assert "switches" in rules(checks.run(cfg, d, s), "warn")
 
 

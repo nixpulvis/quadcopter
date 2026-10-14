@@ -18,6 +18,10 @@ COPTER_MODES = {
     "Smart_RTL": 21, "Auto RTL": 27,
 }
 
+# RCx_OPTION aux functions quad.yaml may use (RC_Channel.cpp, Copter-4.7.2).
+# Fence (11) is deliberately absent: no switch may touch the fence.
+AUX_OPTIONS = {"Brake": 33}
+
 CHANNEL_ORDERS = {"AETR", "TAER", "AERT", "RETA"}
 FAILSAFE_ACTIONS = {"rtl", "land"}
 FENCE_TYPES = {"altitude": 1, "circle": 2, "polygon": 4}
@@ -63,6 +67,10 @@ class QuadConfig:
         """Mode overrides, lowest priority first (a later one wins)."""
         return [Switch(f"override{i}", None, str(s["switch"]), int(s["positions"]), list(s["modes"]))
                 for i, s in enumerate(self.raw["switches"].get("overrides") or [])]
+
+    @property
+    def aux(self) -> list[dict]:
+        return list(self.raw.get("aux") or [])
 
     @property
     def elrs(self) -> dict[str, str]:
@@ -172,6 +180,35 @@ def validate(raw: dict) -> None:
             e.append("switches.arm.channel: ELRS treats CH5 (AUX1) as the arm channel; keep arm on CH5")
         if sw["arm"].get("positions") != 2:
             e.append("switches.arm.positions: arm needs a 2-position switch")
+
+    aux = raw.get("aux") or []
+    if not isinstance(aux, list):
+        e.append("aux: expected a list")
+        aux = []
+    for i, a in enumerate(aux):
+        where = f"aux[{i}]"
+        if not isinstance(a, dict):
+            e.append(f"{where}: expected a mapping")
+            continue
+        ch = a.get("channel")
+        if not isinstance(ch, int) or not 5 <= ch <= 16:
+            e.append(f"{where}.channel: must be 5..16")
+        elif ch in used:
+            e.append(f"{where}.channel: CH{ch} already used by {used[ch]}")
+        else:
+            used[ch] = where
+        name = a.get("switch")
+        if not isinstance(name, str) or not re.fullmatch(r"S[A-Z]", name):
+            e.append(f"{where}.switch: EdgeTX switch name like SE")
+        elif name in names:
+            e.append(f"{where}.switch: {name} already used by {names[name]}")
+        else:
+            names[name] = where
+        if a.get("option") not in AUX_OPTIONS:
+            e.append(f"{where}.option: one of {sorted(AUX_OPTIONS)}")
+        off = a.get("disabled_by")
+        if off is not None and (not isinstance(off, str) or not re.fullmatch(r"S[A-Z]\d", off)):
+            e.append(f"{where}.disabled_by: a switch position like SD1")
 
     if _need(raw, "rx.protocol", e, str) not in (None, "crsf"):
         e.append("rx.protocol: only crsf is supported (security rule: plain CRSF)")

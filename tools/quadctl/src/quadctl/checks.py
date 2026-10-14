@@ -115,6 +115,30 @@ def rule_arm(cfg, d, s, out):
         out.append(Finding("error", "arm", f"arm switch {a.switch} sends {pwms} us; ArduPilot needs <{AUX_LOW} disarmed and >{AUX_HIGH} armed"))
 
 
+def rule_aux(cfg, d, s, out):
+    from .config import AUX_OPTIONS
+    for a in cfg.aux:
+        ch, opt = a["channel"], AUX_OPTIONS[a["option"]]
+        v = _p(s, f"RC{ch}_OPTION")
+        if v is not None and int(v) != opt:
+            out.append(Finding("error", "aux", f"RC{ch}_OPTION={int(v)}, expected {opt} ({a['option']})"))
+        lines = _channel(s, ch, out, "aux")
+        if not lines:
+            continue
+        gate = c.parse_position(a.get("disabled_by") or "")
+        counts = {x.switch: x.positions for x in [*cfg.switches.values(), *cfg.overrides]}
+        for on in (0, 1):
+            for gated in ((0, 1) if gate else (0,)):
+                pos = {a["switch"]: (on, 2)}
+                if gate:
+                    pos[gate[0]] = (gate[1] if gated else 0, counts.get(gate[0], 3))
+                pwm = c.pct_to_pwm(c.channel_pct(lines, pos))
+                want_high = on and not gated
+                if want_high and pwm <= AUX_HIGH or not want_high and pwm >= AUX_LOW:
+                    state = f"{a['switch']} {'down' if on else 'up'}" + (f", {a['disabled_by']} active" if gated else "")
+                    out.append(Finding("error", "aux", f"CH{ch} sends {pwm} us with {state}; {a['option']} should be {'on' if want_high else 'off'}"))
+
+
 def _describe(pos: dict[str, tuple[int, int]]) -> str:
     names = {2: ["up", "down"], 3: ["up", "mid", "down"]}
     return ", ".join(f"{sw} {names[n][p]}" for sw, (p, n) in pos.items())
@@ -162,14 +186,15 @@ def rule_duplicate_options(cfg, d, s, out):
     if s.fc_params is None:
         return
     arm = cfg.switches["arm"].channel
+    aux = {a["channel"] for a in cfg.aux}
     for ch in range(1, 17):
         v = s.fc_params.get(f"RC{ch}_OPTION")
-        if v is None or ch == arm:
+        if v is None or ch == arm or ch in aux:
             continue
         if int(v) == c.RC_OPTION_ARMDISARM:
             out.append(Finding("error", "switches", f"RC{ch}_OPTION={int(v)} arms from a second channel"))
-        elif int(v) in (c.RC_OPTION_LAND, c.RC_OPTION_RTL):
-            out.append(Finding("warn", "switches", f"RC{ch}_OPTION={int(v)}: a second {'Land' if int(v) == c.RC_OPTION_LAND else 'RTL'} switch besides the override; quad.yaml doesn't use it"))
+        elif int(v) in (c.RC_OPTION_LAND, c.RC_OPTION_RTL, c.RC_OPTION_ACRO):
+            out.append(Finding("warn", "switches", f"RC{ch}_OPTION={int(v)} changes flight mode outside the CH6 mode channel; quad.yaml doesn't use it"))
 
 
 def rule_rx(cfg, d, s, out):
@@ -294,6 +319,7 @@ RULES = [
     rule_arm,
     rule_mode,
     rule_switch_resolution,
+    rule_aux,
     rule_duplicate_options,
     rule_rx,
     rule_telemetry,

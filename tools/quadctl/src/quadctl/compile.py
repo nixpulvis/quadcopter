@@ -6,12 +6,13 @@ import itertools
 import re
 from dataclasses import dataclass, field
 
-from .config import COPTER_MODES, FENCE_TYPES, QuadConfig
+from .config import AUX_OPTIONS, COPTER_MODES, FENCE_TYPES, QuadConfig
 
 # ArduPilot RCx_OPTION values (RC_Channel.cpp, Copter-4.7.2).
 RC_OPTION_ARMDISARM = 153
 RC_OPTION_LAND = 18
 RC_OPTION_RTL = 4
+RC_OPTION_ACRO = 52
 RC_OPTION_FENCE = 11
 
 # RC_OPTIONS bits (RC_Channels_VarInfo.h, Copter-4.7.2).
@@ -149,6 +150,13 @@ def compile_config(cfg: QuadConfig) -> Desired:
     d.mode_outputs = mode_outputs(mode, cfg.overrides)
     lines = [m for m in d.radio_mixes if m.channel == mode.channel]
     pwms = [(pct_to_pwm(channel_pct(lines, pos)), name) for pos, name in d.mode_outputs]
+    for a in cfg.aux:
+        # Momentary/2-position switch, optionally forced low while another
+        # switch position is active (e.g. no Brake while in Acro).
+        p[f"RC{a['channel']}_OPTION"] = AUX_OPTIONS[a["option"]]
+        d.radio_mixes.append(Mix(a["channel"], a["switch"]))
+        if a.get("disabled_by"):
+            d.radio_mixes.append(Mix(a["channel"], "MAX", -100, 0, a["disabled_by"], "REPLACE"))
     centers = [1165, 1295, 1425, 1555, 1685, 1875]
     for slot in range(1, 7):
         # Every slot gets the mode of the nearest output, so a slightly-off

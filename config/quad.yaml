@@ -17,14 +17,18 @@ model:
 # EdgeTX switch names on the Pocket. Confirm against the radio (SYS > Hardware).
 # Overrides are mixed onto the mode channel, lowest priority first: in Fly the
 # switch below decides, any other position forces its mode, and a later
-# override always beats an earlier one (SC RTL/Land beats SD Acro). ArduPilot
-# sees one mode channel, so the switches can't disagree.
+# override always beats an earlier one. So SD (Acro) > SC (RTL/Land) > SB, and
+# the only way out of Acro is SD. ArduPilot sees one mode channel.
 switches:
   arm:  { channel: 5, switch: SA, positions: 2 }
   mode: { channel: 6, switch: SB, positions: 3, modes: [Loiter, AltHold, Stabilize] }
   overrides:
-    - { switch: SD, positions: 2, modes: [Fly, Acro] }
     - { switch: SC, positions: 3, modes: [Fly, RTL, Land] }
+    - { switch: SD, positions: 2, modes: [Fly, Acro] }
+
+# Aux functions on their own channels (RCx_OPTION). Fence is never allowed.
+aux:
+  - { channel: 7, switch: SE, option: Brake, disabled_by: SD1 }  # hold to brake; off in Acro
 
 rx:
   serial: 7              # UART7, the LUX F765 Receiver socket
