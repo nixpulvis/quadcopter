@@ -1,0 +1,86 @@
+# Source of truth for the quad and the Pocket. `quadctl check` validates it;
+# `quadctl plan` / `apply` push it to the FC (USB serial) and the Pocket (USB
+# storage). See tools/quadctl/README.md.
+version: 1
+
+firmware:
+  # Version patterns. Exact builds and hashes live in firmware.lock.
+  ardupilot: "4.7.*"
+  board: LumenierLUXF765-NDAA
+  edgetx: "*"            # pin once milestone 0 shows what the Pocket runs
+  elrs: "3.*"            # TX module and RP1 must match each other
+
+model:
+  name: QUAD550          # EdgeTX model to patch, matched by name
+  channel_order: AETR    # CH1 roll, CH2 pitch, CH3 throttle, CH4 yaw
+
+# EdgeTX switch names on the Pocket. Confirm against the radio (SYS > Hardware).
+# Overrides are mixed onto the mode channel, lowest priority first: in Fly the
+# switch below decides, any other position forces its mode, and a later
+# override always beats an earlier one. So SD (Acro) > SC (RTL/Land) > SB, and
+# the only way out of Acro is SD. ArduPilot sees one mode channel.
+switches:
+  arm:  { channel: 5, switch: SA, positions: 2 }
+  mode: { channel: 6, switch: SB, positions: 3, modes: [Loiter, AltHold, Stabilize] }
+  overrides:
+    - { switch: SC, positions: 3, modes: [Fly, RTL, Land] }
+    - { switch: SD, positions: 2, modes: [Fly, Acro] }
+
+# Aux functions on their own channels (RCx_OPTION). Fence is never allowed.
+aux:
+  - { channel: 7, switch: SE, option: Brake, disabled_by: SD1 }  # hold to brake; off in Acro
+
+# S1 dial = ArduPilot transmitter tuning (RCx_OPTION 219). The dial sets the
+# chosen gain live, in RAM only. The FC's "Quad Tune" CRSF menu (ELRS Lua >
+# Other Devices) picks the target from this list only, while disarmed, and
+# every boot starts Off. Ranges are centred on ArduCopter's defaults, so the
+# dial's middle is stock. Only quadctl over USB can change this list.
+tuning:
+  knob: { channel: 8, source: S1 }
+  targets:
+    - { name: Rate P,    tune: 4,  min: 0.07,   max: 0.20 }    # ATC_RAT_RLL_P/PIT_P (0.135)
+    - { name: Rate D,    tune: 21, min: 0.0016, max: 0.0056 }  # ATC_RAT_RLL_D/PIT_D (0.0036)
+    - { name: Acro rate, tune: 25, min: 180,    max: 540 }     # ACRO_RP_RATE deg/s (360)
+
+rx:
+  serial: 7              # UART7, the LUX F765 Receiver socket
+  protocol: crsf
+  baud_420k: true        # RC_OPTIONS bit 13
+  lq_as_rssi: true       # RC_OPTIONS bit 11, RSSI_TYPE 3
+
+battery:
+  cells: 3
+  capacity_mah: 5000
+  low_volt_per_cell: 3.5
+  critical_volt_per_cell: 3.3
+  current_max_a: 70      # MOT_BAT_CURR_MAX
+  monitor: pm02_v3
+  amp_per_volt: 36.36    # PM02 V3 scale (value from the stock-build BOM); check with a clamp meter
+
+failsafe:
+  rc: rtl
+  battery_low: rtl
+  battery_critical: land
+
+fence:
+  enable: true
+  type: [altitude, circle]
+  alt_max_m: 120
+  radius_m: 150
+  action: smartrtl       # on a breach: retrace the path back inside (SmartRTL, else RTL, else Land)
+  avoid:                 # before a breach: back away from the fence (Loiter/AltHold)
+    margin_m: 2
+    backup_speed_ms: 0.75
+
+# Applied on the radio by SCRIPTS/FUNCTIONS/qelrs.lua. Values are the option
+# text the ELRS Lua shows; keys are the field labels.
+elrs:
+  Packet Rate: 150Hz
+  Telem Ratio: "1:4"
+  Switch Mode: Wide
+  Max Power: 100
+  Dynamic: "Dyn"         # ELRS 3 options: Off, Dyn, AUX9..AUX12 (confirm on the radio)
+  Link Mode: Normal      # never MAVLink (security rule); ignored on ELRS < 3.5
+
+telemetry:
+  passthrough: true      # RC_OPTIONS bit 8, for Yaapu or our own telemetry script
