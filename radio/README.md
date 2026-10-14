@@ -17,9 +17,9 @@ Yaapu view with less on screen.
   3.50 V/cell and inverts below 3.30 V/cell; mAh blinks past 80% used.
 - **Centre:** attitude indicator with a 10 degree pitch ladder, roll angle
   (top left) and heading (bottom).
-- **Right:** link quality, GPS sats, altitude as `A rel/msl` (metres above
-  where it armed / above sea level), ground speed, distance from where it
-  armed, and TX power (mW).
+- **Right:** link quality, GPS sats, distance from where it armed, altitude
+  as `A rel/msl` (metres above where it armed / above sea level), ground
+  speed, and TX power (mW).
 
 It only reads the sensors EdgeTX discovers from CRSF (`FM`, `RxBt`, `Curr`,
 `Capa`, `Bat%`, `RQly`, `TPWR`, `Sats`, `Alt`, `GSpd`, `GPS`, `Ptch`, `Roll`,

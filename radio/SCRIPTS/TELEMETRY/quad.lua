@@ -306,6 +306,13 @@ local function drawStats(up)
   rows[#rows + 1] = { "Sat", sats and fmt("%d", math.floor(sats)) or "--",
                       (sats and sats < 6) and BLINK or 0 }
 
+  local dist = nil
+  local gps = val("GPS")
+  if st.home and type(gps) == "table" and gps.lat then
+    dist = distance(st.home.lat, st.home.lon, gps.lat, gps.lon)
+  end
+  rows[#rows + 1] = { "Hm", dist and fmt("%dm", math.floor(dist + 0.5)) or "--", 0 }
+
   -- Height above the arming point / GPS altitude above sea level.
   local msl = num("Alt")
   local rel = nil
@@ -315,13 +322,6 @@ local function drawStats(up)
 
   local spd = num("GSpd")
   rows[#rows + 1] = { "Spd", spd and fmt("%d", math.floor(spd + 0.5)) or "--", 0 }
-
-  local dist = nil
-  local gps = val("GPS")
-  if st.home and type(gps) == "table" and gps.lat then
-    dist = distance(st.home.lat, st.home.lon, gps.lat, gps.lon)
-  end
-  rows[#rows + 1] = { "Hm", dist and fmt("%dm", math.floor(dist + 0.5)) or "--", 0 }
 
   local pwr = num("TPWR")
   rows[#rows + 1] = { "Pwr", pwr and fmt("%d", math.floor(pwr)) or "--", 0 }
