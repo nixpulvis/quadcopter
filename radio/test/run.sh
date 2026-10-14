@@ -14,4 +14,8 @@ python3 "$here/render.py" --sheet "$out/sheet.png" \
   "$out/disarmed-level.png" "$out/armed-bank-right.png" \
   "$out/armed-dive-left.png" "$out/low-battery.png" \
   "$out/inverted.png" "$out/no-telemetry.png"
+python3 "$here/render.py" --sheet "$out/sheet-passthrough.png" \
+  "$out/pt-prearm.png" "$out/pt-flying.png" \
+  "$out/pt-batt-failsafe.png" "$out/pt-ekf.png" \
+  "$out/pt-fence-terrain.png" "$out/pt-page2.png"
 echo "previews in $out"
