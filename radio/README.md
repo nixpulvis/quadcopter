@@ -18,8 +18,9 @@ Yaapu view with less on screen.
 - **Centre:** attitude indicator with a 10 degree pitch ladder, roll angle
   (top left) and heading (bottom).
 - **Right:** link quality, GPS sats, distance from where it armed, altitude
-  as `A rel/msl` (metres above where it armed / above sea level), ground
-  speed, and TX power (mW).
+  as `A rel/msl` (above where it armed / above sea level), ground speed, and
+  TX power (mW). Imperial by default (ft, mph, mi); set `units = "metric"`
+  for m, km/h, km.
 
 It only reads the sensors EdgeTX discovers from CRSF (`FM`, `RxBt`, `Curr`,
 `Capa`, `Bat%`, `RQly`, `TPWR`, `Sats`, `Alt`, `GSpd`, `GPS`, `Ptch`, `Roll`,
@@ -39,7 +40,7 @@ To override them without editing the script, put a table in
 `/SCRIPTS/QUAD/telem_cfg.lua`, which `quadctl` can generate from `quad.yaml`:
 
 ```lua
-return { cells = 3, capacity = 5000, cellWarn = 3.5, cellCrit = 3.3 }
+return { cells = 3, capacity = 5000, cellWarn = 3.5, cellCrit = 3.3, units = "imperial" }
 ```
 
 ### To check on the bench
@@ -51,6 +52,9 @@ been confirmed on this radio yet:
   right side should rise. If not, set `pitchSign` or `rollSign` to `-1`.
 - ArduPilot marks disarmed by ending the CRSF flight mode with `*`
   (`STAB*`). ARMED/DISARM and the timer depend on that.
+- EdgeTX reports the CRSF `Alt` sensor in metres and `GSpd` in km/h, and the
+  script converts from those. If the sensors were set to other units on the
+  radio, the numbers will be off.
 - `NO TLM` comes from `getRSSI()` dropping to 0 when the link is lost.
 
 ### Test without the radio

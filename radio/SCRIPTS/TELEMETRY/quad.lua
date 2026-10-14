@@ -26,6 +26,7 @@ local cfg = {
   pitchSign = 1,      -- flip to -1 if nose up moves the horizon up
   rollSign = 1,       -- flip to -1 if right roll tilts the horizon the wrong way
   pxPerDeg = 1.5,     -- pitch scale of the attitude indicator
+  units = "imperial", -- or "metric": ft, mph, mi vs m, km/h, km
 }
 
 local CFG_PATH = "/SCRIPTS/QUAD/telem_cfg.lua"
@@ -306,22 +307,33 @@ local function drawStats(up)
   rows[#rows + 1] = { "Sat", sats and fmt("%d", math.floor(sats)) or "--",
                       (sats and sats < 6) and BLINK or 0 }
 
+  -- EdgeTX reports CRSF altitude in m and ground speed in km/h.
+  local imp = cfg.units ~= "metric"
+  local function h(v) return v and fmt("%d", math.floor((imp and v * 3.28084 or v) + 0.5)) or "--" end
+
   local dist = nil
   local gps = val("GPS")
   if st.home and type(gps) == "table" and gps.lat then
     dist = distance(st.home.lat, st.home.lon, gps.lat, gps.lon)
   end
-  rows[#rows + 1] = { "Hm", dist and fmt("%dm", math.floor(dist + 0.5)) or "--", 0 }
+  local d = "--"
+  if dist and imp then
+    local ft = dist * 3.28084
+    d = ft < 5280 and fmt("%dft", math.floor(ft + 0.5)) or fmt("%.1fmi", ft / 5280)
+  elseif dist then
+    d = dist < 1000 and fmt("%dm", math.floor(dist + 0.5)) or fmt("%.1fkm", dist / 1000)
+  end
+  rows[#rows + 1] = { "Hm", d, 0 }
 
   -- Height above the arming point / GPS altitude above sea level.
   local msl = num("Alt")
   local rel = nil
   if msl and st.home and st.home.alt then rel = msl - st.home.alt end
-  local function m(v) return v and fmt("%d", math.floor(v + 0.5)) or "--" end
-  rows[#rows + 1] = { "A", (rel or msl) and m(rel) .. "/" .. m(msl) or "--", 0 }
+  rows[#rows + 1] = { "A", (rel or msl) and h(rel) .. "/" .. h(msl) or "--", 0 }
 
   local spd = num("GSpd")
-  rows[#rows + 1] = { "Spd", spd and fmt("%d", math.floor(spd + 0.5)) or "--", 0 }
+  if spd and imp then spd = spd * 0.621371 end
+  rows[#rows + 1] = { imp and "mph" or "kmh", spd and fmt("%d", math.floor(spd + 0.5)) or "--", 0 }
 
   local pwr = num("TPWR")
   rows[#rows + 1] = { "Pwr", pwr and fmt("%d", math.floor(pwr)) or "--", 0 }

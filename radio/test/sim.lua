@@ -52,7 +52,10 @@ function getValue(id) return sensors[id] or 0 end
 function getRSSI() return rssi, 45, 42 end
 function getTime() return now end
 function loadScript(path)
-  if path == "/SCRIPTS/QUAD/telem_cfg.lua" then return nil, "not found" end
+  if path == "/SCRIPTS/QUAD/telem_cfg.lua" then
+    if CFG == nil then return nil, "not found" end
+    return function() return CFG end
+  end
   return loadfile(path)
 end
 
@@ -77,12 +80,14 @@ local scenarios = {
   { "low-battery", base({ FM = "RTL", RxBt = 10.2, Capa = 4300, RQly = 62, Sats = 5,
                           Roll = 5 * RAD }), 62 },
   { "inverted", base({ Roll = 170 * RAD, Ptch = 10 * RAD }), 100 },
+  { "metric", base({ Roll = 10 * RAD }), 100, { units = "metric" } },
   { "no-gps", base({ GPS = false, Sats = false, Alt = false, GSpd = false }), 100 },
 }
 
 local chunk = assert(loadfile(script))
 for _, sc in ipairs(scenarios) do
   local name, s, r = sc[1], sc[2], sc[3]
+  CFG = sc[4]
   local screen = chunk()
   sensors, rssi, now = {}, 0, 0
   screen.init()
