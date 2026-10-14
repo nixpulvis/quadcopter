@@ -32,7 +32,7 @@ STICKS = {"A": "roll", "E": "pitch", "T": "throttle", "R": "yaw"}
 
 FS_THR = {"rtl": 1, "land": 3}
 BATT_FS = {"rtl": 2, "land": 1}
-FENCE_ACTION = {"report": 0, "rtl": 1, "land": 2}
+FENCE_ACTION = {"report": 0, "rtl": 1, "land": 2, "brake": 4}  # 4 = Brake or Land
 
 
 def pct_to_pwm(pct: float) -> int:
@@ -202,6 +202,12 @@ def compile_config(cfg: QuadConfig) -> Desired:
     p["FENCE_ALT_MAX"] = f["alt_max_m"]
     p["FENCE_RADIUS"] = f["radius_m"]
     p["FENCE_ACTION"] = FENCE_ACTION[f["action"]]
+    avoid = f.get("avoid")
+    if avoid:
+        # Push back from the fence before it's hit (position modes only).
+        d.fc_bits["AVOID_ENABLE"] = (1, 1)  # bit 0: UseFence
+        p["AVOID_MARGIN"] = avoid["margin_m"]
+        p["AVOID_BACKUP_SPD"] = avoid["backup_speed_ms"]
 
     d.fc_params = {k: float(v) for k, v in p.items()}
     return d

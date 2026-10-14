@@ -121,3 +121,9 @@ def test_thin_telemetry_ratio_warns():
     cfg, d, s = setup()
     s.elrs_tx["Telem Ratio"] = "1:64"
     assert "telemetry" in rules(checks.run(cfg, d, s), "warn")
+
+
+def test_avoidance_fence_bit_off_is_a_security_error():
+    cfg, d, s = setup()
+    s.fc_params["AVOID_ENABLE"] = 2  # proximity only
+    assert "security-fence" in rules(checks.run(cfg, d, s))

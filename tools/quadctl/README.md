@@ -107,7 +107,8 @@ params are still applied normally). Plain `flash` does only required flashes;
 
 ## Security rules enforced
 
-- No `RCx_OPTION` may be 11 (Fence), and `FENCE_*` must match `quad.yaml`.
+- No `RCx_OPTION` may be 11 (Fence), and `FENCE_*` / `AVOID_*` must match `quad.yaml`
+  (fence breach = Brake; avoidance backs the quad away from the fence in Loiter/AltHold).
 - The RX port stays RCIN (not MAVLink) and ELRS `Link Mode` must be `Normal`.
 
 ## Not verified on hardware yet

@@ -55,7 +55,10 @@ fence:
   type: [altitude, circle]
   alt_max_m: 120
   radius_m: 150
-  action: rtl
+  action: brake          # on a breach: stop (Brake, or Land without GPS)
+  avoid:                 # before a breach: back away from the fence (Loiter/AltHold)
+    margin_m: 2
+    backup_speed_ms: 0.75
 
 # Applied on the radio by SCRIPTS/FUNCTIONS/qelrs.lua. Values are the option
 # text the ELRS Lua shows; keys are the field labels.

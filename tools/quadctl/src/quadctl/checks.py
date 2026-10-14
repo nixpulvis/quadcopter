@@ -245,11 +245,18 @@ def rule_fence_usb_only(cfg, d, s, out):
     """Security rule: the fence is set over USB only; no RC switch may touch it."""
     if s.fc_params is None:
         return
+    if "AVOID_ENABLE" in d.fc_bits:
+        v = s.fc_params.get("AVOID_ENABLE")
+        if v is not None and not int(v) & 1:
+            out.append(Finding("error", "security-fence", "AVOID_ENABLE has the fence bit off: the quad won't back away from the fence"))
     for ch in range(1, 17):
         v = s.fc_params.get(f"RC{ch}_OPTION")
         if v is not None and int(v) == c.RC_OPTION_FENCE:
             out.append(Finding("error", "security-fence", f"RC{ch}_OPTION=11 lets a switch change the fence"))
-    for name in ("FENCE_ENABLE", "FENCE_TYPE", "FENCE_ALT_MAX", "FENCE_RADIUS", "FENCE_ACTION"):
+    for name in ("FENCE_ENABLE", "FENCE_TYPE", "FENCE_ALT_MAX", "FENCE_RADIUS", "FENCE_ACTION",
+                 "AVOID_MARGIN", "AVOID_BACKUP_SPD"):
+        if name not in d.fc_params:
+            continue
         v = s.fc_params.get(name)
         want = d.fc_params[name]
         if v is not None and abs(v - want) > PARAM_TOL:
@@ -271,7 +278,7 @@ def rule_fc_drift(cfg, d, s, out):
     if s.fc_params is None:
         return
     for name, want in d.fc_params.items():
-        if name.startswith("FENCE_"):
+        if name.startswith(("FENCE_", "AVOID_")):
             continue  # reported by rule_fence_usb_only
         got = s.fc_params.get(name)
         if got is None:
