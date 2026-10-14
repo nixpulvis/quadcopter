@@ -45,24 +45,34 @@ def test_mavlink_link_mode_is_an_error():
 
 def test_mode_switch_weight_change_lands_on_wrong_mode():
     cfg, d, s = setup()
-    s.radio_mixes[6] = [Mix(6, "SB", weight=50)]  # positions at 1244/1500/1756
-    errs = [f for f in checks.run(cfg, d, s) if f.rule == "mode"]
-    assert errs
+    s.radio_mixes[6][0] = Mix(6, "SB", weight=100)  # plain -100/0/100 mix
+    assert [f for f in checks.run(cfg, d, s) if f.rule == "mode"]
+
+
+def test_override_line_missing_is_caught():
+    cfg, d, s = setup()
+    s.radio_mixes[6] = s.radio_mixes[6][:2]  # Land line deleted on the radio
+    msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
+    assert any("SC down" in m and "expected Land" in m for m in msgs)
 
 
 def test_fltmode_slot_changed_in_qgc():
     cfg, d, s = setup()
     s.fc_params["FLTMODE6"] = 0
     msgs = [f.message for f in checks.run(cfg, d, s) if f.rule == "mode"]
-    assert any("expected RTL" in m for m in msgs)
+    assert any("expected Land" in m for m in msgs)
 
 
-def test_centre_position_near_band_edge_is_fine_when_slots_match():
-    # 1500 us is 10 us above the 1490 edge, but slots 3 and 4 both hold Loiter.
+def test_hybrid_switch_mode_is_an_error():
     cfg, d, s = setup()
-    assert not [f for f in checks.run(cfg, d, s) if f.rule == "mode"]
-    s.fc_params["FLTMODE3"] = 0  # now the 1490 edge changes mode
-    assert [f for f in checks.run(cfg, d, s) if f.rule == "mode" and "band edge" in f.message]
+    s.elrs_tx["Switch Mode"] = "Hybrid"
+    assert any("use Wide" in f.message for f in checks.run(cfg, d, s))
+
+
+def test_extra_land_switch_warns():
+    cfg, d, s = setup()
+    s.fc_params["RC7_OPTION"] = 18  # left over from the bench plan
+    assert "switches" in rules(checks.run(cfg, d, s), "warn")
 
 
 def test_channel_order_mismatch():

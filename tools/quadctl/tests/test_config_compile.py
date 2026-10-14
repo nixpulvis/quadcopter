@@ -5,7 +5,7 @@ from ruamel.yaml import YAML
 
 from conftest import ROOT
 from quadctl import config
-from quadctl.compile import compile_config, defaults_file, fltmode_slot, pct_to_pwm
+from quadctl.compile import channel_pct, compile_config, defaults_file, fltmode_slot, pct_to_pwm
 
 QUAD = ROOT / "config" / "quad.yaml"
 
@@ -25,19 +25,32 @@ def test_repo_config_compiles():
     d = compile_config(config.load(QUAD))
     p = d.resolve_params()
     assert (p["RCMAP_ROLL"], p["RCMAP_PITCH"], p["RCMAP_THROTTLE"], p["RCMAP_YAW"]) == (1, 2, 3, 4)
-    assert p["RC5_OPTION"] == 153 and p["RC7_OPTION"] == 18 and p["FLTMODE_CH"] == 6
+    assert p["RC5_OPTION"] == 153 and p["RC6_OPTION"] == 0 and p["FLTMODE_CH"] == 6
+    assert "RC7_OPTION" not in p  # SD and CH7 are free
     assert p["SERIAL7_PROTOCOL"] == 23
     assert int(p["RC_OPTIONS"]) & (1 << 13)
     assert p["BATT_LOW_VOLT"] == 10.5 and p["BATT_CRT_VOLT"] == 9.9
     assert p["FENCE_TYPE"] == 3 and p["FENCE_ACTION"] == 1
 
 
-def test_mode_switch_positions_land_on_their_modes():
+def test_every_switch_combination_lands_on_its_mode():
     d = compile_config(config.load(QUAD))
-    p = d.fc_params
-    want = [config.COPTER_MODES[m] for m in ("Stabilize", "Loiter", "RTL")]
-    for pct, mode in zip((-100, 0, 100), want):
-        assert p[f"FLTMODE{fltmode_slot(pct_to_pwm(pct))}"] == mode
+    lines = [m for m in d.radio_mixes if m.channel == 6]
+    seen = {}
+    for pos, mode in d.mode_outputs:
+        pwm = pct_to_pwm(channel_pct(lines, pos))
+        assert d.fc_params[f"FLTMODE{fltmode_slot(pwm)}"] == config.COPTER_MODES[mode]
+        seen[(pos["SB"][0], pos["SC"][0])] = mode
+    # SC up = Fly: SB decides. SC mid/down force RTL/Land whatever SB says.
+    assert [seen[(b, 0)] for b in range(3)] == ["Loiter", "AltHold", "Stabilize"]
+    assert {seen[(b, 1)] for b in range(3)} == {"RTL"}
+    assert {seen[(b, 2)] for b in range(3)} == {"Land"}
+
+
+def test_mode_channel_mix_lines():
+    d = compile_config(config.load(QUAD))
+    ch6 = [(m.source, m.weight, m.offset, m.swtch, m.mltpx) for m in d.radio_mixes if m.channel == 6]
+    assert ch6 == [("SB", 25, -40, None, "ADD"), ("MAX", 36, 0, "SC1", "REPLACE"), ("MAX", 100, 0, "SC2", "REPLACE")]
 
 
 def test_rc_options_keeps_unowned_bits():
@@ -54,7 +67,10 @@ def test_defaults_file_format():
 
 @pytest.mark.parametrize("edit,needle", [
     (lambda r: r["switches"]["arm"].update(channel=8), "arm channel"),
-    (lambda r: r["switches"]["land"].update(channel=6), "already used"),
+    (lambda r: r["switches"]["mode"].update(channel=5), "already used"),
+    (lambda r: r["switches"]["override"].update(switch="SB"), "already used"),
+    (lambda r: r["switches"]["override"].update(modes=["RTL", "RTL", "Land"]), "must be Fly"),
+    (lambda r: r["switches"]["override"].update(channel=7), "has no channel"),
     (lambda r: r["elrs"].update({"Link Mode": "MAVLink"}), "security rule"),
     (lambda r: r["rx"].update(protocol="sbus"), "plain CRSF"),
     (lambda r: r["switches"]["mode"].update(modes=["Stabilize", "Loiter"]), "one mode per"),

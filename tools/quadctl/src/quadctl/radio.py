@@ -98,8 +98,11 @@ class ModelFile:
         out: dict[int, list[Mix]] = {}
         for m in self.data.get("mixData") or []:
             ch = int(m["destCh"]) + 1
+            sw = m.get("swtch")
+            sw = None if sw in (None, "", "NONE") else str(sw)
             out.setdefault(ch, []).append(
-                Mix(ch, str(m["srcRaw"]), _num(m.get("weight", 100)), _num(m.get("offset", 0))))
+                Mix(ch, str(m["srcRaw"]), _num(m.get("weight", 100)), _num(m.get("offset", 0)),
+                    sw, str(m.get("mltpx", "ADD"))))
         return out
 
     def sticks(self) -> dict[int, str]:
@@ -139,65 +142,76 @@ class ModelFile:
     # --- editing --------------------------------------------------------
 
     def plan_mixes(self, want: list[Mix]) -> list[str]:
-        """Human-readable changes set_mixes() would make."""
+        """Human-readable changes set_mixes() would make.
+
+        quadctl owns every channel it has mixes for: all of that channel's
+        lines are replaced, lines on other channels are left alone.
+        """
         have = self.mixes()
         out = []
-        for m in want:
-            lines = have.get(m.channel, [])
-            if len(lines) > 1:
-                out.append(f"CH{m.channel}: {len(lines)} mix lines, can't edit safely (fix by hand to one line)")
-            elif not lines:
-                out.append(f"CH{m.channel}: add mix {m.source} {m.weight:g}%")
-            else:
-                h = lines[0]
-                if (h.source, h.weight, h.offset) != (m.source, m.weight, m.offset):
-                    out.append(f"CH{m.channel}: {h.source} {h.weight:g}% {h.offset:+g} -> {m.source} {m.weight:g}% {m.offset:+g}")
+        for ch, lines in _by_channel(want).items():
+            cur = have.get(ch, [])
+            if [m.key() for m in cur] != [m.key() for m in lines]:
+                old = "; ".join(_describe(m) for m in cur) or "nothing"
+                new = "; ".join(_describe(m) for m in lines)
+                out.append(f"CH{ch}: {old} -> {new}")
         return out
 
     def set_mixes(self, want: list[Mix]) -> None:
-        have = self.mixes()
-        for m in want:
-            if len(have.get(m.channel, [])) > 1:
-                raise RadioError(f"CH{m.channel} has several mix lines; reduce it to one on the radio first")
+        if not self.plan_mixes(want):
+            return
         lines = self.text.splitlines(keepends=True)
         start, end = _block(lines, "mixData")
         if start is None:
-            # No mixes at all: append a block at the end of the file.
             if lines and not lines[-1].endswith("\n"):
                 lines[-1] += "\n"
             lines.append("mixData:\n")
             start, end = len(lines) - 1, len(lines)
-        entries = _entries(lines, start + 1, end)
-        by_ch: dict[int, tuple[int, int]] = {}
-        for s, e in entries:
+        owned = _by_channel(want)
+        chunks: list[tuple[int, list[str]]] = []
+        for s, e in _entries(lines, start + 1, end):
             ch = _entry_value(lines[s:e], "destCh")
-            if ch is not None:
-                by_ch[int(ch) + 1] = (s, e)
-        # Edit in place, last first so indices stay valid.
-        edits: list[tuple[int, int, int, list[str]]] = []
-        for m in want:
-            vals = {"srcRaw": m.source, "weight": _fmt(m.weight), "offset": _fmt(m.offset)}
-            if m.channel in by_ch:
-                s, e = by_ch[m.channel]
-                edits.append((s, e, m.channel, _set_values(lines[s:e], vals)))
-            else:
-                new = ["  -\n", f"    destCh: {m.channel - 1}\n"] + [f"    {k}: {v}\n" for k, v in vals.items()]
-                # Insert before the first entry with a higher channel (EdgeTX keeps mixes sorted).
-                pos = end
-                for s, e in entries:
-                    ch = _entry_value(lines[s:e], "destCh")
-                    if ch is not None and int(ch) + 1 > m.channel:
-                        pos = s
-                        break
-                edits.append((pos, pos, m.channel, new))
-        # Apply from the bottom up so earlier indices stay valid; at the same
-        # position, replace before inserting, and insert higher channels first.
-        for s, e, _ch, new in sorted(edits, key=lambda x: x[:3], reverse=True):
-            lines[s:e] = new
+            ch = int(ch) + 1 if ch is not None else -1
+            if ch not in owned:
+                chunks.append((ch, lines[s:e]))
+        for ch, mixes in owned.items():
+            for m in mixes:
+                chunks.append((ch, _entry_text(m)))
+        # EdgeTX keeps mixes sorted by channel; sorted() is stable, so line
+        # order inside a channel (ADD before REPLACE) is kept.
+        chunks.sort(key=lambda x: x[0])
+        lines[start + 1:end] = [l for _, chunk in chunks for l in chunk]
         self.text = "".join(lines)
 
     def save(self) -> None:
         self.path.write_text(self.text)
+
+
+def _by_channel(mixes: list[Mix]) -> dict[int, list[Mix]]:
+    out: dict[int, list[Mix]] = {}
+    for m in mixes:
+        out.setdefault(m.channel, []).append(m)
+    return out
+
+
+def _describe(m: Mix) -> str:
+    text = f"{m.source} {m.weight:g}%"
+    if m.offset:
+        text += f" {m.offset:+g}"
+    if m.swtch:
+        text += f" when {m.swtch}"
+    if m.mltpx != "ADD":
+        text += f" {m.mltpx}"
+    return text
+
+
+def _entry_text(m: Mix) -> list[str]:
+    out = ["  -\n", f"    destCh: {m.channel - 1}\n", f"    srcRaw: {m.source}\n",
+           f"    weight: {_fmt(m.weight)}\n", f"    offset: {_fmt(m.offset)}\n"]
+    if m.swtch:
+        out.append(f'    swtch: "{m.swtch}"\n')
+    out.append(f"    mltpx: {m.mltpx}\n")
+    return out
 
 
 def _num(v) -> float:
@@ -232,25 +246,6 @@ def _entry_value(entry: list[str], key: str) -> str | None:
         if m:
             return m.group(1).strip('"')
     return None
-
-
-def _set_values(entry: list[str], vals: dict[str, str]) -> list[str]:
-    out = list(entry)
-    done = set()
-    indent = "    "
-    for i, l in enumerate(out):
-        for k, v in vals.items():
-            m = re.match(rf"^(\s*(?:-\s+)?){k}:", l)
-            if m:
-                out[i] = f"{m.group(1)}{k}: {v}\n"
-                done.add(k)
-        m = re.match(r"^(\s+)\w", l)
-        if m and not l.lstrip().startswith("-"):
-            indent = m.group(1)
-    for k, v in vals.items():
-        if k not in done:
-            out.append(f"{indent}{k}: {v}\n")
-    return out
 
 
 def find_model(volume: Path, name: str) -> ModelFile:

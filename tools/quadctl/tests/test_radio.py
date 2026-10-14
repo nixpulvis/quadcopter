@@ -7,7 +7,8 @@ from quadctl import radio
 from quadctl.compile import Mix
 
 FIX = ROOT / "tools" / "quadctl" / "tests" / "fixtures" / "model-synthetic.yml"
-WANT = [Mix(5, "SA"), Mix(6, "SB"), Mix(7, "SD")]
+WANT = [Mix(5, "SA"), Mix(6, "SB", 25, -40),
+        Mix(6, "MAX", 36, 0, "SC1", "REPLACE"), Mix(6, "MAX", 100, 0, "SC2", "REPLACE")]
 
 
 @pytest.fixture
@@ -38,8 +39,8 @@ def test_set_mixes_only_touches_owned_lines(card):
     again = radio.find_model(card, "QUAD550")
     assert again.plan_mixes(WANT) == []
     mixes = again.mixes()
-    assert [(x.source, x.weight, x.offset) for x in mixes[6]] == [("SB", 100, 0)]
-    assert mixes[5][0].source == "SA" and mixes[7][0].source == "SD"
+    assert [m.key() for m in mixes[6]] == [m.key() for m in WANT[1:]]
+    assert mixes[5][0].source == "SA" and 7 not in mixes
     # Everything outside mixData is byte-identical.
     cut = lambda t: t.split("mixData:")[0] + t.split("moduleData:")[1]
     assert cut(before) == cut(again.text)
@@ -48,12 +49,15 @@ def test_set_mixes_only_touches_owned_lines(card):
     assert dest == sorted(dest)
 
 
-def test_refuses_multi_line_channel(card):
+def test_owned_channel_is_replaced_whole(card):
     m = radio.find_model(card, "QUAD550")
-    m.text = m.text.replace("moduleData:", "  -\n    destCh: 5\n    srcRaw: SD\n    weight: 100\nmoduleData:")
-    assert "can't edit" in " ".join(m.plan_mixes(WANT))
-    with pytest.raises(radio.RadioError):
-        m.set_mixes(WANT)
+    # A stray second line on CH6 and a line on CH8 the user added by hand.
+    m.text = m.text.replace("moduleData:", "  -\n    destCh: 5\n    srcRaw: SD\n    weight: 100\n"
+                            "  -\n    destCh: 7\n    srcRaw: SD\n    weight: 100\nmoduleData:")
+    m.set_mixes(WANT)
+    mixes = radio.ModelFile(m.path, m.text).mixes()
+    assert [x.key() for x in mixes[6]] == [x.key() for x in WANT[1:]]
+    assert mixes[8][0].source == "SD"  # not ours: untouched
 
 
 def test_missing_model(card):

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+import re
 from dataclasses import dataclass, field
 
 from .config import COPTER_MODES, FENCE_TYPES, QuadConfig
@@ -9,6 +11,7 @@ from .config import COPTER_MODES, FENCE_TYPES, QuadConfig
 # ArduPilot RCx_OPTION values (RC_Channel.cpp, Copter-4.7.2).
 RC_OPTION_ARMDISARM = 153
 RC_OPTION_LAND = 18
+RC_OPTION_RTL = 4
 RC_OPTION_FENCE = 11
 
 # RC_OPTIONS bits (RC_Channels_VarInfo.h, Copter-4.7.2).
@@ -60,17 +63,48 @@ def band_margin(pwm: int, slot_modes: dict[int, int] | None = None) -> int:
     return min((abs(pwm - e) for e in edges), default=10_000)
 
 
-def switch_pcts(positions: int, weight: float = 100, offset: float = 0) -> list[float]:
-    raw = [-100, 100] if positions == 2 else [-100, 0, 100]
-    return [r * weight / 100 + offset for r in raw]
+SWITCH_RAW = {2: [-100, 100], 3: [-100, 0, 100]}
+
+# Channel percent that lands in the middle of each FLTMODE slot.
+SLOT_PCT = [-65, -40, -15, 11, 36, 100]
 
 
 @dataclass
 class Mix:
-    channel: int          # 1-based
-    source: str           # EdgeTX source name, e.g. SA
+    channel: int               # 1-based
+    source: str                # EdgeTX source: switch name (SA), MAX, I0...
     weight: float = 100
     offset: float = 0
+    swtch: str | None = None   # line only active in this switch position, e.g. SC1
+    mltpx: str = "ADD"         # ADD or REPLACE
+
+    def key(self):
+        return (self.source, float(self.weight), float(self.offset), self.swtch, self.mltpx)
+
+
+def parse_position(swtch: str) -> tuple[str, int] | None:
+    m = re.fullmatch(r"(S[A-Z])(\d)", swtch or "")
+    return (m.group(1), int(m.group(2))) if m else None
+
+
+def channel_pct(lines: list[Mix], positions: dict[str, tuple[int, int]]) -> float:
+    """Evaluate an EdgeTX mixer channel. positions: switch -> (position, count)."""
+    acc = 0.0
+    for m in lines:
+        if m.swtch:
+            want = parse_position(m.swtch)
+            if want is None or positions.get(want[0], (0, 0))[0] != want[1]:
+                continue
+        if m.source == "MAX":
+            src = 100.0
+        elif m.source in positions:
+            pos, count = positions[m.source]
+            src = SWITCH_RAW[count][pos]
+        else:
+            src = 0.0
+        value = src * m.weight / 100 + m.offset
+        acc = value if m.mltpx == "REPLACE" else acc + value
+    return max(-100.0, min(100.0, acc))
 
 
 @dataclass
@@ -79,6 +113,8 @@ class Desired:
     # bitmask params where quadctl owns only some bits: name -> (mask, bits)
     fc_bits: dict[str, tuple[int, int]] = field(default_factory=dict)
     radio_mixes: list[Mix] = field(default_factory=list)
+    # every (switch positions, expected flight mode) the mode channel must produce
+    mode_outputs: list[tuple[dict[str, tuple[int, int]], str]] = field(default_factory=list)
     radio_model: str = ""
     elrs: dict[str, str] = field(default_factory=dict)
 
@@ -104,21 +140,22 @@ def compile_config(cfg: QuadConfig) -> Desired:
 
     # Switches.
     sw = cfg.switches
-    p[f"RC{sw['arm'].channel}_OPTION"] = RC_OPTION_ARMDISARM
-    p[f"RC{sw['land'].channel}_OPTION"] = RC_OPTION_LAND
-    p[f"RC{sw['mode'].channel}_OPTION"] = 0
-    p["FLTMODE_CH"] = sw["mode"].channel
-    pwms = [pct_to_pwm(x) for x in switch_pcts(sw["mode"].positions)]
-    modes = sw["mode"].modes
+    arm, mode = sw["arm"], sw["mode"]
+    p[f"RC{arm.channel}_OPTION"] = RC_OPTION_ARMDISARM
+    p[f"RC{mode.channel}_OPTION"] = 0
+    p["FLTMODE_CH"] = mode.channel
+    d.radio_mixes.append(Mix(arm.channel, arm.switch))
+    d.radio_mixes.extend(mode_mixes(mode, sw.get("override")))
+    d.mode_outputs = mode_outputs(mode, sw.get("override"))
+    lines = [m for m in d.radio_mixes if m.channel == mode.channel]
+    pwms = [(pct_to_pwm(channel_pct(lines, pos)), name) for pos, name in d.mode_outputs]
     centers = [1165, 1295, 1425, 1555, 1685, 1875]
     for slot in range(1, 7):
-        # Every slot gets the mode of the nearest switch position, so a
-        # slightly-off PWM still lands on an intended mode.
-        nearest = min(range(len(pwms)), key=lambda i: abs(pwms[i] - centers[slot - 1]))
-        p[f"FLTMODE{slot}"] = COPTER_MODES[modes[nearest]]
-    for role in ("arm", "mode", "land"):
-        s = sw[role]
-        d.radio_mixes.append(Mix(s.channel, s.switch))
+        # Every slot gets the mode of the nearest output, so a slightly-off
+        # PWM still lands on an intended mode; unused slots never hold a
+        # mode nobody asked for.
+        _, name = min(pwms, key=lambda x: abs(x[0] - centers[slot - 1]))
+        p[f"FLTMODE{slot}"] = COPTER_MODES[name]
 
     # Receiver.
     rx = cfg["rx"]
@@ -160,6 +197,41 @@ def compile_config(cfg: QuadConfig) -> Desired:
 
     d.fc_params = {k: float(v) for k, v in p.items()}
     return d
+
+
+def mode_slots(mode, override) -> tuple[list[int], list[int]]:
+    """FLTMODE slots for the mode switch positions and the override positions."""
+    base = [1, 2, 3] if mode.positions == 3 else [1, 3]
+    k = len(override.modes) - 1 if override else 0
+    return base, list(range(7 - k, 7))
+
+
+def mode_mixes(mode, override) -> list[Mix]:
+    """Mode switch on the mode channel, with the override switch REPLACEing it.
+
+    The mode switch line puts each position in the middle of its slot (one
+    linear line: weight 25, offset -40 gives -65/-40/-15 %). Each override
+    position past the first (Fly) replaces the channel with a fixed value.
+    """
+    base, over = mode_slots(mode, override)
+    lo, hi = SLOT_PCT[base[0] - 1], SLOT_PCT[base[-1] - 1]
+    weight, offset = (hi - lo) / 2, (hi + lo) / 2
+    out = [Mix(mode.channel, mode.switch, weight, offset)]
+    for j, slot in enumerate(over, start=1):
+        out.append(Mix(mode.channel, "MAX", SLOT_PCT[slot - 1], 0, f"{override.switch}{j}", "REPLACE"))
+    return out
+
+
+def mode_outputs(mode, override) -> list[tuple[dict[str, tuple[int, int]], str]]:
+    out = []
+    o_count = override.positions if override else 1
+    for mpos, opos in itertools.product(range(mode.positions), range(o_count)):
+        pos = {mode.switch: (mpos, mode.positions)}
+        if override:
+            pos[override.switch] = (opos, override.positions)
+        name = mode.modes[mpos] if opos == 0 else override.modes[opos]
+        out.append((pos, name))
+    return out
 
 
 def defaults_file(d: Desired, current: dict[str, float] | None = None) -> str:

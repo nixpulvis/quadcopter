@@ -79,18 +79,14 @@ def _p(s: State, name: str) -> float | None:
     return s.fc_params.get(name)
 
 
-def _switch_pwms(s: State, ch: int, switch: str, positions: int, out: list[Finding], rule: str) -> list[int] | None:
+def _channel(s: State, ch: int, out: list[Finding], rule: str) -> list[Mix] | None:
     if s.radio_mixes is None:
         return None
     lines = s.radio_mixes.get(ch, [])
-    mine = [m for m in lines if m.source == switch]
-    if not mine:
-        out.append(Finding("error", rule, f"radio CH{ch} has no mix from {switch}"))
+    if not lines:
+        out.append(Finding("error", rule, f"radio CH{ch} has no mixes"))
         return None
-    if len(lines) != 1:
-        out.append(Finding("warn", rule, f"radio CH{ch} has {len(lines)} mix lines; only the {switch} line is checked"))
-    m = mine[0]
-    return [c.pct_to_pwm(x) for x in c.switch_pcts(positions, m.weight, m.offset)]
+    return lines
 
 
 def rule_channel_order(cfg, d, s, out):
@@ -111,9 +107,17 @@ def rule_arm(cfg, d, s, out):
     v = _p(s, f"RC{a.channel}_OPTION")
     if v is not None and int(v) != c.RC_OPTION_ARMDISARM:
         out.append(Finding("error", "arm", f"RC{a.channel}_OPTION={int(v)}, expected {c.RC_OPTION_ARMDISARM} (Arm/Disarm)"))
-    pwms = _switch_pwms(s, a.channel, a.switch, a.positions, out, "arm")
-    if pwms and not (min(pwms) < AUX_LOW and max(pwms) > AUX_HIGH):
-        out.append(Finding("error", "arm", f"arm switch PWM {pwms} doesn't cross ArduPilot's {AUX_LOW}/{AUX_HIGH} thresholds"))
+    lines = _channel(s, a.channel, out, "arm")
+    if not lines:
+        return
+    pwms = [c.pct_to_pwm(c.channel_pct(lines, {a.switch: (pos, 2)})) for pos in range(2)]
+    if not (pwms[0] < AUX_LOW and pwms[1] > AUX_HIGH):
+        out.append(Finding("error", "arm", f"arm switch {a.switch} sends {pwms} us; ArduPilot needs <{AUX_LOW} disarmed and >{AUX_HIGH} armed"))
+
+
+def _describe(pos: dict[str, tuple[int, int]]) -> str:
+    names = {2: ["up", "down"], 3: ["up", "mid", "down"]}
+    return ", ".join(f"{sw} {names[n][p]}" for sw, (p, n) in pos.items())
 
 
 def rule_mode(cfg, d, s, out):
@@ -121,44 +125,51 @@ def rule_mode(cfg, d, s, out):
     v = _p(s, "FLTMODE_CH")
     if v is not None and int(v) != m.channel:
         out.append(Finding("error", "mode", f"FLTMODE_CH={int(v)}, mode switch is on CH{m.channel}"))
-    pwms = _switch_pwms(s, m.channel, m.switch, m.positions, out, "mode")
-    if not pwms:
+    lines = _channel(s, m.channel, out, "mode")
+    if not lines:
         return
     slot_modes = {}
     for slot in range(1, 7):
         got = _p(s, f"FLTMODE{slot}")
         slot_modes[slot] = int(got if got is not None else d.fc_params[f"FLTMODE{slot}"])
-    for pos, (pwm, mode) in enumerate(zip(pwms, m.modes), 1):
+    for pos, mode in d.mode_outputs:
+        pwm = c.pct_to_pwm(c.channel_pct(lines, pos))
         slot = c.fltmode_slot(pwm)
+        where = f"{_describe(pos)} sends {pwm} us"
         margin = c.band_margin(pwm, slot_modes)
         if margin < BAND_MARGIN_US:
-            out.append(Finding("error", "mode", f"position {pos} sends {pwm} us, only {margin} us from a FLTMODE band edge that changes mode"))
-        got = _p(s, f"FLTMODE{slot}")
-        if got is not None and int(got) != COPTER_MODES[mode]:
-            name = next((k for k, x in COPTER_MODES.items() if x == int(got)), str(int(got)))
-            out.append(Finding("error", "mode", f"position {pos} ({pwm} us) selects FLTMODE{slot}={name}, expected {mode}"))
+            out.append(Finding("error", "mode", f"{where}, only {margin} us from a FLTMODE band edge that changes mode"))
+        got = slot_modes[slot]
+        if got != COPTER_MODES[mode]:
+            name = next((k for k, x in COPTER_MODES.items() if x == got), str(got))
+            out.append(Finding("error", "mode", f"{where} = FLTMODE{slot} {name}, expected {mode}"))
 
 
-def rule_land(cfg, d, s, out):
-    l = cfg.switches["land"]
-    v = _p(s, f"RC{l.channel}_OPTION")
-    if v is not None and int(v) != c.RC_OPTION_LAND:
-        out.append(Finding("error", "land", f"RC{l.channel}_OPTION={int(v)}, expected {c.RC_OPTION_LAND} (Land)"))
-    pwms = _switch_pwms(s, l.channel, l.switch, l.positions, out, "land")
-    if pwms and not (min(pwms) < AUX_LOW and max(pwms) > AUX_HIGH):
-        out.append(Finding("error", "land", f"land switch PWM {pwms} doesn't cross {AUX_LOW}/{AUX_HIGH}"))
+def rule_switch_resolution(cfg, d, s, out):
+    """ELRS Hybrid sends CH6-CH11 as 6-position values, which can't carry the
+    mode channel's mixed outputs; Wide keeps them at full enough resolution."""
+    sm = (s.elrs_tx or {}).get("Switch Mode")
+    if sm is None or sm == "Wide":
+        return
+    lines = d.radio_mixes
+    outputs = {round(c.channel_pct([x for x in lines if x.channel == cfg.switches["mode"].channel], pos))
+               for pos, _ in d.mode_outputs}
+    if len(outputs) > 3:
+        out.append(Finding("error", "mode", f"ELRS Switch Mode {sm} can't carry {len(outputs)} distinct mode-channel values; use Wide"))
 
 
 def rule_duplicate_options(cfg, d, s, out):
     if s.fc_params is None:
         return
-    wanted = {cfg.switches["arm"].channel: c.RC_OPTION_ARMDISARM, cfg.switches["land"].channel: c.RC_OPTION_LAND}
+    arm = cfg.switches["arm"].channel
     for ch in range(1, 17):
         v = s.fc_params.get(f"RC{ch}_OPTION")
-        if v is None or ch in wanted:
+        if v is None or ch == arm:
             continue
-        if int(v) in wanted.values():
-            out.append(Finding("error", "switches", f"RC{ch}_OPTION={int(v)} duplicates a switch quad.yaml puts on another channel"))
+        if int(v) == c.RC_OPTION_ARMDISARM:
+            out.append(Finding("error", "switches", f"RC{ch}_OPTION={int(v)} arms from a second channel"))
+        elif int(v) in (c.RC_OPTION_LAND, c.RC_OPTION_RTL):
+            out.append(Finding("warn", "switches", f"RC{ch}_OPTION={int(v)}: a second {'Land' if int(v) == c.RC_OPTION_LAND else 'RTL'} switch besides the override; quad.yaml doesn't use it"))
 
 
 def rule_rx(cfg, d, s, out):
@@ -282,7 +293,7 @@ RULES = [
     rule_channel_order,
     rule_arm,
     rule_mode,
-    rule_land,
+    rule_switch_resolution,
     rule_duplicate_options,
     rule_rx,
     rule_telemetry,

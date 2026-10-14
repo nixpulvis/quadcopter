@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -31,7 +32,7 @@ class ConfigError(Exception):
 @dataclass
 class Switch:
     role: str
-    channel: int
+    channel: int | None
     switch: str
     positions: int
     modes: list[str] = field(default_factory=list)
@@ -50,7 +51,8 @@ class QuadConfig:
     def switches(self) -> dict[str, Switch]:
         out = {}
         for role, s in self.raw["switches"].items():
-            out[role] = Switch(role, int(s["channel"]), str(s["switch"]),
+            ch = s.get("channel")
+            out[role] = Switch(role, int(ch) if ch is not None else None, str(s["switch"]),
                                int(s["positions"]), list(s.get("modes", [])))
         return out
 
@@ -106,15 +108,22 @@ def validate(raw: dict) -> None:
 
     sw = _need(raw, "switches", e, dict) or {}
     used: dict[int, str] = {}
-    for role in ("arm", "mode", "land"):
+    names: dict[str, str] = {}
+    for role in ("arm", "mode"):
         if role not in sw:
             e.append(f"missing switches.{role}")
     for role, s in sw.items():
+        if role not in ("arm", "mode", "override"):
+            e.append(f"switches.{role}: unknown role (arm, mode, override)")
+            continue
         if not isinstance(s, dict):
             e.append(f"switches.{role}: expected a mapping")
             continue
         ch = s.get("channel")
-        if not isinstance(ch, int) or not 5 <= ch <= 16:
+        if role == "override":
+            if ch is not None:
+                e.append("switches.override: has no channel; it is mixed onto the mode channel")
+        elif not isinstance(ch, int) or not 5 <= ch <= 16:
             e.append(f"switches.{role}.channel: must be 5..16 (1-4 are sticks)")
         elif ch in used:
             e.append(f"switches.{role}.channel: CH{ch} already used by {used[ch]}")
@@ -122,17 +131,31 @@ def validate(raw: dict) -> None:
             used[ch] = role
         if s.get("positions") not in (2, 3):
             e.append(f"switches.{role}.positions: must be 2 or 3")
-        if not isinstance(s.get("switch"), str):
+        name = s.get("switch")
+        if not isinstance(name, str) or not re.fullmatch(r"S[A-Z]", name):
             e.append(f"switches.{role}.switch: EdgeTX switch name like SA")
-    if "mode" in sw and isinstance(sw["mode"], dict):
-        modes = sw["mode"].get("modes") or []
-        if len(modes) != sw["mode"].get("positions"):
-            e.append("switches.mode.modes: one mode per switch position")
-        for m in modes:
-            if m not in COPTER_MODES:
-                e.append(f"switches.mode.modes: unknown ArduCopter mode {m!r}")
-    if "arm" in sw and isinstance(sw["arm"], dict) and sw["arm"].get("channel") != 5:
-        e.append("switches.arm.channel: ELRS treats CH5 (AUX1) as the arm channel; keep arm on CH5")
+        elif name in names:
+            e.append(f"switches.{role}.switch: {name} already used by {names[name]}")
+        else:
+            names[name] = role
+    for role in ("mode", "override"):
+        s = sw.get(role)
+        if not isinstance(s, dict):
+            continue
+        modes = s.get("modes") or []
+        if len(modes) != s.get("positions"):
+            e.append(f"switches.{role}.modes: one mode per switch position")
+        for i, m in enumerate(modes):
+            if role == "override" and i == 0:
+                if m != "Fly":
+                    e.append("switches.override.modes: first position must be Fly (mode switch decides)")
+            elif m not in COPTER_MODES:
+                e.append(f"switches.{role}.modes: unknown ArduCopter mode {m!r}")
+    if "arm" in sw and isinstance(sw["arm"], dict):
+        if sw["arm"].get("channel") != 5:
+            e.append("switches.arm.channel: ELRS treats CH5 (AUX1) as the arm channel; keep arm on CH5")
+        if sw["arm"].get("positions") != 2:
+            e.append("switches.arm.positions: arm needs a 2-position switch")
 
     if _need(raw, "rx.protocol", e, str) not in (None, "crsf"):
         e.append("rx.protocol: only crsf is supported (security rule: plain CRSF)")

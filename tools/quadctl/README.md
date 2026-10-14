@@ -38,13 +38,29 @@ Script > qelrs**. `verify` warns until it's there. The **Quad ELRS** Tools page
 shows what the script did with each setting; ENTER drops hand-made overrides so
 `quad.yaml` wins again (`apply --reset-elrs` does the same from the Mac).
 
+## Switch layout
+
+- **SA** (CH5): arm.
+- **SB** (CH6): Loiter / AltHold / Stabilize.
+- **SC**: Fly / RTL / Land, mixed onto CH6. In Fly, SB decides; RTL and Land
+  REPLACE the channel whatever SB says. ArduPilot sees one mode channel, so the
+  override and the mode switch can't disagree, and flipping SC back to Fly
+  returns to SB's mode.
+
+Each output sits in the middle of its `FLTMODE` slot (SB 1167/1295/1423 us in
+slots 1-3, RTL 1684 us in slot 5, Land 2012 us in slot 6; slot 4 holds RTL as a
+safe filler). `checks.py` evaluates the real mix lines for all nine SB x SC
+combinations against the FC's `FLTMODE` slots. CH6 needs ELRS Switch Mode
+**Wide**; Hybrid would quantize it.
+
 ## What goes where
 
-- **FC params** (`compile.py`): channel map, arm/mode/land switches and every
+- **FC params** (`compile.py`): channel map, arm switch, mode channel and every
   `FLTMODE` slot, RX port and the `RC_OPTIONS` bits quadctl owns, battery and
   failsafes, fence. Everything else (calibration, PIDs) is never touched.
-- **Pocket model** (`radio.py`): the CH5-CH7 switch mixes, edited in place in the
-  model's YAML; the rest of the file stays byte-identical. Scripts from
+- **Pocket model** (`radio.py`): every mix line on the channels quadctl owns
+  (CH5 arm, CH6 mode), replaced in the model's YAML; other channels and the rest
+  of the file stay byte-identical. Scripts from
   `radio/SCRIPTS/` and `SCRIPTS/QUAD/elrs.cfg` are copied to the card.
 - **ELRS module** (`radio/SCRIPTS/QUAD/elrs.lua`): reads `elrs.cfg` at power-up and,
   with no receiver linked, writes what changed. A setting changed by hand on the
@@ -96,7 +112,8 @@ confirmed with `quadctl pull` on the real devices:
 
 - EdgeTX YAML names: `mixData`/`destCh`/`srcRaw`, stick sources `Ail/Ele/Thr/Rud`,
   `moduleData.0.type: TYPE_CROSSFIRE`, `customFn` `PLAY_SCRIPT`, `semver` in `radio.yml`.
-- The Pocket's switch names (`SA`, `SB`, `SD` in `quad.yaml`).
+- The Pocket's switch names (`SA`, `SB`, `SC` in `quad.yaml`) and EdgeTX's
+  switch-position names in mix lines (`SC1` = middle, `SC2` = down), plus `MAX` and `REPLACE`.
 - ELRS option text (`Dyn`, `100`) and the version bytes in the device-info frame.
 - That function scripts can use `crossfireTelemetryPush/Pop` and share the
   `quadElrs` global with the Tools page.
