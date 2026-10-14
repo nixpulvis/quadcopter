@@ -50,6 +50,22 @@ shows what the script did with each setting; ENTER drops hand-made overrides so
   with no receiver linked, writes what changed. A setting changed by hand on the
   radio is reported as an override and left alone.
 
+### Sharing CRSF with the telemetry screen
+
+The telemetry screen (`SCRIPTS/TELEMETRY/quad.lua`) decodes ArduPilot's CRSF
+passthrough frames from the same `crossfireTelemetryPop()` queue the boot script
+uses, so a frame either script pops is gone for the other. They take turns:
+
+- The boot script only pushes or pops while no receiver is linked
+  (`getRSSI() == 0`). With a link up it pauses and leaves the queue alone; any
+  pending ELRS change waits until the quad is off again.
+- Once it's in sync it goes idle and never pops again until the next power-up.
+
+So power the radio first and the quad second: the check finishes in a second or
+two before the link comes up, and the telemetry screen then has the queue to itself.
+`quad.yaml` already sets the passthrough bit (`telemetry.passthrough`) and
+`Telem Ratio 1:4`.
+
 ## Firmware
 
 `flash --check` reports each chip as `ok`, `FLASH REQUIRED` (the running

@@ -84,6 +84,9 @@ class Radio:
         self.sd = sd
         self.module = module
         self.time = 0
+        self.rssi = None  # None: getRSSI not provided
+        self.pushes = 0
+        self.pops = 0
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         g = self.lua.globals()
         files = {}
@@ -114,10 +117,12 @@ class Radio:
                 f[0].write_text(f[2])
 
         def push(cmd, data):
+            self.pushes += 1
             self.module.receive(int(cmd), [int(data[i + 1]) for i in range(len(data))])
             return True
 
         def pop():
+            self.pops += 1
             if not self.module.out:
                 return None
             cmd, data = self.module.out.pop(0)
@@ -126,6 +131,8 @@ class Radio:
         g.io = self.lua.table_from({"open": io_open, "read": io_read, "write": io_write, "close": io_close})
         g.crossfireTelemetryPush = push
         g.crossfireTelemetryPop = pop
+        if True:
+            g.getRSSI = lambda: 0 if self.rssi is None else self.rssi
         self.core = self.lua.execute(CORE.read_text())
 
     def boot(self, ticks=3000):
@@ -267,3 +274,28 @@ def test_old_elrs_without_link_mode(tmp_path):
     assert s.phase == "idle"
     assert r.status()["Link Mode"] == "sync"
     assert r.state_file()["tx_version"] == "3.3.1"
+
+
+def test_never_touches_crsf_queue_while_linked(setup):
+    sd, mod, r = setup
+    r.rssi = 80  # receiver linked: telemetry screen owns the queue
+    telemetry = (0x80, [0xEA, 0xC8, 1, 2, 3])
+    mod.out.append(telemetry)
+    s = r.boot(ticks=500)
+    assert r.pushes == 0 and r.pops == 0
+    assert mod.out == [telemetry]
+    assert "quad to be off" in s.message
+    r.rssi = 0
+    mod.out.clear()
+    for _ in range(3000):
+        r.time += 2
+        s = r.core.step(s, r.time)
+        if s.phase == "idle":
+            break
+    assert s.phase == "idle" and mod.value("Packet Rate") == "150Hz"
+    pops = r.pops
+    r.rssi = 80
+    for _ in range(100):
+        r.time += 2
+        s = r.core.step(s, r.time)
+    assert r.pops == pops  # idle: never pops again

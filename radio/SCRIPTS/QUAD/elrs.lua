@@ -10,8 +10,9 @@
 --   A == S, D ~= S    config changed: write D
 --   A ~= S, A ~= D    changed by hand on the radio: leave it, report override
 --   no S yet          first run: write D
--- It only writes while no receiver is linked, and goes idle when done so it
--- stops reading the shared CRSF queue (the telemetry screen needs it).
+-- It only talks to the module while no receiver is linked (getRSSI() == 0):
+-- with a link up it pauses without touching the shared CRSF queue, which then
+-- belongs to the telemetry screen. Once done it goes idle and never pops again.
 
 local DIR = "/SCRIPTS/QUAD/"
 local CFG = DIR .. "elrs.cfg"
@@ -211,6 +212,7 @@ end
 local function onStatus(s, data)
   if data[2] ~= TX then return end
   s.linked = (data[6] or 0) % 2 == 1
+  s.gotStatus = true
 end
 
 local function indexOf(options, text)
@@ -276,7 +278,28 @@ local function publish(s)
 end
 
 -- One non-blocking step. Call from run(); `now` is getTime() (10 ms ticks).
+local function linkUp()
+  return getRSSI ~= nil and getRSSI() > 0
+end
+
 function M.step(s, now)
+  -- Share the CRSF queue: while a receiver is linked the telemetry screen
+  -- (SCRIPTS/TELEMETRY/quad.lua) owns it, so pause without pushing or
+  -- popping anything until the link is down again.
+  if s.phase ~= "idle" and s.phase ~= "error" and linkUp() then
+    if not s.paused then
+      s.paused = true
+      s.resumeMessage = s.message
+    end
+    s.message = "ELRS check waits for the quad to be off"
+    s.timer = now + 100
+    publish(s)
+    return s
+  elseif s.paused then
+    s.paused = nil
+    s.message = s.resumeMessage
+    s.timer = now
+  end
   if s.phase ~= "idle" and s.phase ~= "error" then
     while true do
       local cmd, data = crossfireTelemetryPop()
@@ -329,7 +352,7 @@ function M.step(s, now)
     end
     if s.phase == "check_link" and now >= s.timer then
       s.statusTries = (s.statusTries or 0) + 1
-      if s.statusTries > 5 and getRSSI ~= nil then
+      if s.statusTries > 5 and not s.gotStatus and getRSSI ~= nil then
         -- No 0x2E status from this module: fall back to EdgeTX's link RSSI.
         if getRSSI() == 0 then s.phase = "write" else s.message = "ELRS changes pending: power the quad off" end
       end
