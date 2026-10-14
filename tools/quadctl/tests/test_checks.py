@@ -17,7 +17,12 @@ def test_desired_state_passes():
     cfg, d, s = setup()
     f = checks.run(cfg, d, s)
     assert rules(f) == set()
-    assert "battery" in rules(f, "warn")  # amp_per_volt unset
+
+
+def test_unset_current_scale_warns():
+    cfg, d, s = setup()
+    cfg.raw["battery"]["amp_per_volt"] = None
+    assert "battery" in rules(checks.run(cfg, d, s), "warn")
 
 
 def test_fence_switch_is_a_security_error():

@@ -33,7 +33,7 @@ battery:
   critical_volt_per_cell: 3.3
   current_max_a: 70      # MOT_BAT_CURR_MAX
   monitor: pm02_v3
-  amp_per_volt: null     # PM02 V3 scale: take from Holybro docs, then check with a clamp meter
+  amp_per_volt: 36.36    # PM02 V3 scale (value from the stock-build BOM); check with a clamp meter
 
 failsafe:
   rc: rtl
