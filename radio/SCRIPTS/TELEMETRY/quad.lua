@@ -133,8 +133,10 @@ local function u32(d, i)
   return d[i] + d[i + 1] * 256 + d[i + 2] * 65536 + d[i + 3] * 16777216
 end
 
--- Only while a receiver is linked: with no link there is no passthrough,
--- and the ELRS boot script (SCRIPTS/QUAD/elrs.lua) owns the queue.
+-- crossfireTelemetryPop() is one queue shared by every Lua script: a frame
+-- popped here is gone for the others (see radio/README.md). Pop only while a
+-- receiver is linked: with no link there is no passthrough, and the ELRS boot
+-- script (SCRIPTS/QUAD/elrs.lua) owns the queue.
 local function pollCrsf()
   if crossfireTelemetryPop == nil or not linkUp() then return end
   for _ = 1, 10 do

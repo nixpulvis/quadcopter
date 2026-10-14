@@ -73,6 +73,26 @@ message bar yet.
 The script sends nothing to the module or the FC, so it can't change params or
 the fence.
 
+### Sharing the CRSF queue
+
+EdgeTX gives Lua one queue for the CRSF frames it doesn't decode itself
+(ArduPilot's `0x80` passthrough frames, ELRS module parameter replies).
+`crossfireTelemetryPop()` removes the oldest frame, so a frame one script pops
+is gone for every other script: two scripts popping at once each lose about
+half the frames. The sensors EdgeTX decodes itself (battery, GPS, attitude,
+link stats) aren't affected; any script can read them with `getValue()`.
+
+- This script pops only while a receiver is linked. The ELRS boot script from
+  `quadctl` (`SCRIPTS/QUAD/elrs.lua`) pops only while none is, so they take
+  turns.
+- The ELRS Lua (SYS > Tools) pops while it's open, so passthrough data goes
+  stale until it's closed.
+- Don't run Yaapu or another passthrough script alongside this one.
+
+If more scripts need these frames later, the plan is one central popper that
+reads the queue and hands each frame to whichever script wants it, rather
+than each script calling `crossfireTelemetryPop()` itself.
+
 ### Height above ground and its `~N`
 
 ArduPilot sends height above terrain (`0x500B`) only while `TERRAIN_ENABLE` is
@@ -117,10 +137,6 @@ been confirmed on this radio yet:
   byte, and the passthrough fields are little-endian. The decoder is tested
   against an encoder ported from ArduPilot, not against a real FC.
 - The scroll wheel arrives as `EVT_VIRTUAL_NEXT`/`PREV` (or `EVT_ROT_*`).
-- The CRSF receive queue is shared with the ELRS boot script
-  (`SCRIPTS/QUAD/elrs.lua` from `quadctl`). They take turns: this script only
-  pops frames while a receiver is linked, and the boot script only while none
-  is.
 
 ### Test without the radio
 
